@@ -20,3 +20,14 @@
 .App-link {
   color: #09d3ac;
 }
+
+.navheader{
+  margin-top: 15px;
+  font-size: 18px;
+  color :black !important;
+  background-color: #b3beca!important
+}
+.btnspace
+{
+  margin: 15px;
+}
