@@ -1,15 +1,12 @@
 import React from 'react';
-import ReactDOM from 'react-dom';
 import PropTypes from 'prop-types';
-import {Form, Input, Image, Loader, Segment, Dimmer, Label} from 'semantic-ui-react';
+import {Form, Input, Image, Loader, Segment, Dimmer, Label, Breadcrumb} from 'semantic-ui-react';
 import {ListRoomRows} from '../components/ListRoomRows';
-// import {SearchingTab} from '../components/SearchingTab';
 import 'semantic-ui-css/semantic.min.css';
 import {toast} from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import '../App.css';
 import {encrypt} from '../components/sha256';
-
 
 const isMobile = {
     Android: function () {
@@ -73,7 +70,7 @@ export class IndexPage extends React.Component {
         this.setState({
             isLoadedRooms: false,
         });
-        await fetch("https://script.google.com/macros/s/AKfycby1NCjArXNvliviV9Su8imyfVXsNTUL2memG4bxJhX4JTcyoXGr/exec?func=listRoomsDetail")
+        await fetch("https://script.google.com/macros/s/AKfycby1NCjArXNvliviV9Su8imyfVXsNTUL2memG4bxJhX4JTcyoXGr/exec?func=listRoomsDetail&token=" + this.props.userInfo.token)
             .then(res => res.json())
             .then(
                 (result) => {
@@ -92,7 +89,6 @@ export class IndexPage extends React.Component {
                         tmp2['value'] = tmp['roomid'];
                         ids.push(tmp2);
                     }
-                    // debugger;
                     if (filter) {
                         let newstr = strs.filter(function (item) {
                             return item[filter.id] == filter.value;
@@ -110,6 +106,7 @@ export class IndexPage extends React.Component {
                         });
                     }
                 }, (error) => {
+                    console.log(error);
                     this.setState({
                         isLoadedRooms: false,
                     });
@@ -118,7 +115,8 @@ export class IndexPage extends React.Component {
     }
 
     getListStatus() {
-        fetch("https://script.google.com/macros/s/AKfycby1NCjArXNvliviV9Su8imyfVXsNTUL2memG4bxJhX4JTcyoXGr/exec?func=listStatus")
+        console.log("getListStatus");
+        fetch("https://script.google.com/macros/s/AKfycby1NCjArXNvliviV9Su8imyfVXsNTUL2memG4bxJhX4JTcyoXGr/exec?func=listStatus&token=" + this.props.userInfo.token)
             .then(res => res.json())
             .then(
                 (result) => {
@@ -149,7 +147,8 @@ export class IndexPage extends React.Component {
     }
 
     getlistoption() {
-        fetch("https://script.google.com/macros/s/AKfycby1NCjArXNvliviV9Su8imyfVXsNTUL2memG4bxJhX4JTcyoXGr/exec?func=listoption")
+        console.log("getlistoption");
+        fetch("https://script.google.com/macros/s/AKfycby1NCjArXNvliviV9Su8imyfVXsNTUL2memG4bxJhX4JTcyoXGr/exec?func=listoption&token=" + this.props.userInfo.token)
             .then(res => res.json())
             .then(
                 (result) => {
@@ -175,7 +174,8 @@ export class IndexPage extends React.Component {
     }
 
     getroomTypeOther() {
-        fetch("https://script.google.com/macros/s/AKfycby1NCjArXNvliviV9Su8imyfVXsNTUL2memG4bxJhX4JTcyoXGr/exec?func=PricebyOther")
+        console.log("getroomTypeOther");
+        fetch("https://script.google.com/macros/s/AKfycby1NCjArXNvliviV9Su8imyfVXsNTUL2memG4bxJhX4JTcyoXGr/exec?func=PricebyOther&token=" + this.props.userInfo.token)
             .then(res => res.json())
             .then(
                 (result) => {
@@ -219,6 +219,7 @@ export class IndexPage extends React.Component {
             "&roomClass=" + roomClass +
             "&options=" + options +
             "&noteText=" + noteText +
+            "&token=" + this.props.userInfo.token +
             "&totalOptionPrice=" + totalOptionPrice;
 
         await fetch('https://script.google.com/macros/s/AKfycby1NCjArXNvliviV9Su8imyfVXsNTUL2memG4bxJhX4JTcyoXGr/exec?func=checkin&id=' + id, {
@@ -286,6 +287,7 @@ export class IndexPage extends React.Component {
             "&totalRoomPrice=" + totalRoomPrice +
             "&totalPrice=" + totalPrice +
             "&noteText=" + noteText +
+            "&token=" + this.props.userInfo.token +
             "&checkoutTime=" + formattedcheckout_date;
 
         if (action == "checkout") {
@@ -320,6 +322,7 @@ export class IndexPage extends React.Component {
     }
 
     handleClearSearching() {
+        console.log("handleClearSearching");
         this.setState({
             roomidselected: '',
             statusSelected: '',
@@ -381,8 +384,6 @@ export class IndexPage extends React.Component {
         }
         return (
             <Segment padded style={styleDisable}>
-                {/*{listRoomIds.length > 0 && <SearchingTab listRoomId={listRoomIds}/>}*/}
-                {/*<Input fluid icon='search plus' action='Search' placeholder='Search...'/>*/}
                 <Label attached='top left' onClick={this.handleClearSearching}>Refresh</Label>
                 <br/>
                 <Form.Group widths='equal'>
@@ -410,6 +411,7 @@ export class IndexPage extends React.Component {
     }
 
     renderListRooms() {
+        console.log("renderListRooms");
         const {rooms, statusIds, roomTypeOtherIds, listoptionIds, listoption} = {...this.state};
 
         if (this.state.isLoadedRooms == false) {
@@ -439,7 +441,6 @@ export class IndexPage extends React.Component {
     async sha256(message) {
         console.log(encrypt("bangth"));
     }
-
 
     getIPAddress() {
         // var https = require('https');
@@ -496,11 +497,11 @@ export class IndexPage extends React.Component {
     }
 
     render() {
+        console.log("render");
         // console.log(this.state.statusIds);
         // console.log(this.state.statusSelected);
         return (
             <div>
-                {/*<ToastContainer style={{fontSize: '20px', textAlign: 'center'}}/>*/}
                 <Form>
                     {this.renderSearchForm()}
                     {this.renderListRooms()}

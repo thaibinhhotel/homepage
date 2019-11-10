@@ -18,12 +18,11 @@ import momentLocalizer from 'react-widgets-moment';
 import DateTimePicker from 'react-widgets/lib/DateTimePicker';
 import 'react-widgets/dist/css/react-widgets.css';
 import {ListOption} from '../components/ListOption';
-import {ConfirmFinalMessage} from '../components/ConfirmFinalMessage';
 import 'semantic-ui-css/semantic.min.css';
 import {toast} from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import '../App.css';
-import {ListRoomRows} from "./ListRoomRows";
+import cookie from 'react-cookies';
 
 Moment.locale('vn')
 momentLocalizer()
@@ -375,6 +374,7 @@ export class RoomDetailCheckin extends React.Component {
         let encoded = "checkinTime=" + formatted_date +
             "&roomClass=" + roomClass +
             "&options=" + options +
+            "&token=" + cookie.load('tokenTBh') +
             "&totalOptionPrice=" + totalOptionPrice +
             "&checkoutTime=" + formattedcheckout_date;
         let result = '';

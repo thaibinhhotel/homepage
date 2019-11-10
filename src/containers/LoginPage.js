@@ -16,6 +16,7 @@ import {
 } from 'semantic-ui-react';
 import {encrypt} from '../components/sha256';
 import {toast} from 'react-toastify';
+import cookie from 'react-cookies';
 
 export class LoginPage extends React.Component {
     constructor(props) {
@@ -33,7 +34,8 @@ export class LoginPage extends React.Component {
             userInfo: {
                 token: '',
                 email: '',
-                ipAddress: ''
+                ipAddress: '',
+                deviceName: '',
             },
             userName: '',
             passWord: '',
@@ -79,6 +81,7 @@ export class LoginPage extends React.Component {
         let username = this.state.userName;
 
         let encoded = "email=" + username +
+            "&deviceName=" + this.props.deviceName +
             "&ipAddress=" + this.props.ipAddress;
 
         console.log(encoded);
@@ -122,6 +125,7 @@ export class LoginPage extends React.Component {
         let encoded = "email=" + username +
             "&pass=" + passWordHash +
             "&pincode=" + pincode +
+            "&deviceName=" + this.props.deviceName +
             "&ipAddress=" + this.props.ipAddress;
 
         console.log(encoded);
@@ -141,8 +145,16 @@ export class LoginPage extends React.Component {
                 data['result'] == 'error' ? msgerr = JSON.stringify(data["error"]) : isValid = true;
                 if (!msgerr) {
                     token = data['token'];
-                    sessionStorage.setItem('tokenTBh', data['token']);
-                    sessionStorage.setItem('emailTBh', username);
+                    cookie.remove('tokenTBh', { path: '/' });
+                    cookie.remove('emailTBh', { path: '/' });
+                    cookie.remove('userNameTBh', { path: '/' });
+                    cookie.save('tokenTBh', data['token'], {path: '/', maxAge: 1296000});
+                    cookie.save('userNameTBh', ("Hello " + data['username']), {path: '/', maxAge: 1296000});
+                    cookie.save('emailTBh', username, {path: '/', maxAge: 1296000});
+                    console.log(cookie.load('tokenTBh'));
+                    console.log(cookie.load('emailTBh'));
+                    // sessionStorage.setItem('tokenTBh', data['token']);
+                    // sessionStorage.setItem('emailTBh', username);
                     toast.success("Login Successfully!", {position: toast.POSITION.TOP_RIGHT});
                 } else {
                     toast.error(msgerr);
@@ -210,6 +222,7 @@ export class LoginPage extends React.Component {
 
 LoginPage.propTypes = {
     ipAddress: PropTypes.string,
+    deviceName: PropTypes.string,
     setTokenValid: PropTypes.func
 }
 
