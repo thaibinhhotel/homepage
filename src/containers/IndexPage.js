@@ -233,7 +233,7 @@ export class IndexPage extends React.Component {
             let isSuccess = false;
             await response.json().then(function (data) {
                 console.log(data);
-                data['result'] == 'error' ? msgerr = JSON.stringify(data["error"]["message"]) : isSuccess = true;
+                data['result'] == 'error' ? msgerr = (JSON.stringify(data["error"]["message"]) + JSON.stringify(data["error"])) : isSuccess = true;
             });
 
             let stt = response.status;
@@ -301,7 +301,7 @@ export class IndexPage extends React.Component {
                 let msgerr = '';
                 let result = [];
                 await response.json().then(function (data) {
-                    data['result'] == 'error' ? msgerr = JSON.stringify(data["error"]["message"]) : result = data['data'];
+                    data['result'] == 'error' ? msgerr = (JSON.stringify(data["error"]["message"]) + JSON.stringify(data["error"])) : result = data['data'];
                 });
 
                 let stt = response.status;
@@ -328,6 +328,9 @@ export class IndexPage extends React.Component {
             statusSelected: '',
         });
         this.getListRoomDetails();
+        this.getlistoption();
+        this.getroomTypeOther();
+
     }
 
     handleChangeRoomIDSelect(event, val = null) {

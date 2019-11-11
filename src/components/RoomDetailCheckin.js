@@ -389,7 +389,7 @@ export class RoomDetailCheckin extends React.Component {
                 let msgerr = '';
 
                 await response.json().then(function (data) {
-                    data['result'] == 'error' ? msgerr = JSON.stringify(data["error"]["message"]) : result = data['data'];
+                    data['result'] == 'error' ? msgerr = (JSON.stringify(data["error"]["message"]) + JSON.stringify(data["error"])) : result = data['data'];
                 });
                 let stt = response.status;
                 if (stt == 200) {

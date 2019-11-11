@@ -4,11 +4,14 @@ import PropTypes from 'prop-types';
 import 'semantic-ui-css/semantic.min.css';
 import {
     Dimmer, Image,
-    Loader, Segment, Grid, Menu, Icon, Form, Input, Dropdown, Button
+    Loader, Segment, Grid, Menu, Icon, Form, Input, Dropdown, Button, Header
 } from 'semantic-ui-react';
 import cookie from 'react-cookies';
 import Table from 'react-bootstrap/Table';
 import PortalEditProduct from '../components/admin/PortalEditProduct';
+import {toast} from 'react-toastify';
+import {ToastContainer} from "react-toastify";
+import {encrypt} from "../components/sha256";
 
 const isMobile = {
     CheckDevices: function () {
@@ -35,6 +38,10 @@ const isMobile = {
     },
 };
 
+function formatNumber(num) {
+    return num.toString().replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1,');
+}
+
 export class AdminPage extends React.Component {
     constructor(props) {
         super(props);
@@ -49,7 +56,9 @@ export class AdminPage extends React.Component {
             isChecking: true,
             activeItem: "",
             headerRow: [],
-            bodyRow: []
+            bodyRow: [],
+            isDataLoaded: false,
+            isSubmiting: false
         };
         [
             'checkTokenValid',
@@ -57,6 +66,12 @@ export class AdminPage extends React.Component {
             'renderListFunc',
             'renderProductList',
             'handleChangeRowValue',
+            'handleItemClick',
+            'getDataAdminByAction',
+            'getListAdminEdit',
+            'addItemProduct',
+            'handleDeleteRow',
+            'handleSubmitAllChange'
         ].forEach((method) => this[method] = this[method].bind(this));
     }
 
@@ -143,29 +158,6 @@ export class AdminPage extends React.Component {
             });
         }
         this.getIPAndCheckToken();
-
-
-        //Fake Date
-        let data = [{
-            "optionId": 1,
-            "description": "Nc sui",
-            "price": 10000,
-        }, {
-            "optionId": 2,
-            "description": "M Tm(1 trng)",
-            "price": 20000,
-        }, {
-            "optionId": 3,
-            "description": "M Tm(1 trng)",
-            "price": 20000,
-        }];
-
-        let rowheader = Object.keys(data[0]);
-
-        this.setState({
-            headerRow: rowheader,
-            bodyRow: data
-        });
     }
 
     clearCookie() {
@@ -174,7 +166,97 @@ export class AdminPage extends React.Component {
         cookie.remove('userNameTBh', {path: '/'});
     }
 
-    handleItemClick = (e, {name}) => this.setState({activeItem: name})
+    getListAdminEdit(action) {
+        console.log("getListRoomDetails");
+        this.setState({
+            isDataLoaded: false,
+        });
+        fetch("https://script.google.com/macros/s/AKfycby1NCjArXNvliviV9Su8imyfVXsNTUL2memG4bxJhX4JTcyoXGr/exec?func=" + action + "&token=" + this.state.userInfo.token)
+            .then(res => res.json())
+            .then(
+                (result) => {
+                    let strs = [];
+                    let tmp = [];
+                    console.log(result);
+                    for (let i = 0; i < result.length; i++) {
+                        tmp = JSON.parse(result[i])
+                        console.log(tmp)
+                        strs.push(tmp);
+                    }
+                    // strs = new Set(strs);
+                    strs = Array.from(new Set(strs.map(JSON.stringify))).map(JSON.parse);
+                    let rowheader = Object.keys(strs[0]);
+
+                    this.setState({
+                        isDataLoaded: true,
+                        headerRow: rowheader,
+                        bodyRow: strs
+                    });
+                }, (error) => {
+                    console.log(error);
+                    this.setState({
+                        isDataLoaded: true,
+                        bodyRow: [],
+                        headerRow: []
+                    });
+                }
+            ).then(() => {
+            this.setState({
+                isDataLoaded: true
+            });
+        })
+    }
+
+    getDataAdminByAction(tblName) {
+        switch (tblName) {
+            case "Hotel":
+                this.getListAdminEdit("listRoomDetail");
+                break;
+            case "FoodOption":
+                this.getListAdminEdit("listoption");
+                break;
+            case "RoomsType":
+                this.getListAdminEdit("PricebyOthers");
+                break;
+            case "RoomPrice":
+                this.getListAdminEdit("PricebyHour");
+                break;
+            case "User":
+                this.getListAdminEdit("listUser");
+                break;
+        }
+    }
+
+    handleItemClick(e, {name}) {
+        this.setState({
+            activeItem: name,
+            bodyRow: [],
+            headerRow: []
+        });
+
+        if (name.match(/Hotel|FoodOption|RoomPrice|RoomsType|User|/i)) {
+            this.getDataAdminByAction(name);
+        }
+    }
+
+    handleDeleteRow(data) {
+        console.log("handleDeleteRow");
+        console.log(data);
+        console.log(this.state.bodyRow);
+        if (this.state.bodyRow.length == 1) {
+            toast.error("Bạn không được xoá hết.");
+            return;
+        }
+        let bodyRow = [...this.state.bodyRow];
+        let removeIndex = bodyRow.map(function (item) {
+            return item[Object.keys(data[0])[0]];
+        }).indexOf(Object.values(data[0])[0]);
+        bodyRow.splice(removeIndex, 1);
+
+        this.setState({
+            bodyRow: bodyRow
+        });
+    }
 
     handleChangeRowValue(newrow) {
         console.log(newrow);
@@ -195,13 +277,102 @@ export class AdminPage extends React.Component {
 
     }
 
+    addItemProduct() {
+        if (!(this.state.activeItem == 'Hotel' || this.state.activeItem == 'FoodOption' || this.state.activeItem == 'RoomsType')) {
+            toast.error("Please contact bangth to add more Item");
+            return;
+        }
+        let bodyRow = this.state.bodyRow;
+        let row = {...bodyRow[bodyRow.length - 1]};
+        Object.keys(row).map(item => {
+            if (item.includes("id") || item.includes("Id")) {
+                row[item] = row[item] + 1;
+            } else {
+                row[item] = '';
+            }
+        });
+
+        bodyRow[bodyRow.length] = row;
+        this.setState({
+            bodyRow: bodyRow
+        })
+    }
+
+    handleSubmitAllChange() {
+        this.setState({
+            isSubmiting: true
+        });
+        let jsonString = JSON.stringify(this.state.bodyRow.map(item => {
+                return JSON.stringify(item);
+            })
+        );
+        if (this.state.activeItem == 'User') {
+            let bodyRow = [...this.state.bodyRow]
+
+            for (let i = 0; i < bodyRow.length; i++) {
+                let row = bodyRow[i];
+                if (row.PassWord && row.PassWord != "") {
+                    bodyRow[i].PassWord = encrypt(row.PassWord);
+                }
+            }
+            jsonString = JSON.stringify(bodyRow.map(item => {
+                    return JSON.stringify(item);
+                })
+            );
+
+        }
+
+        let encoded = "jsonDataEncode=" + jsonString +
+            "&token=" + this.state.userInfo.token +
+            "&activeItem=" + this.state.activeItem;
+
+        fetch('https://script.google.com/macros/s/AKfycby1NCjArXNvliviV9Su8imyfVXsNTUL2memG4bxJhX4JTcyoXGr/exec?func=adminUpdateParam', {
+            method: 'POST',
+            body: encoded,
+            headers: {
+                "Content-type": "application/x-www-form-urlencoded"
+            }
+        }).then(async function (response) {
+            let msgerr = '';
+            let isSuccess = false;
+            await response.json().then(function (data) {
+                console.log(data);
+                data['result'] == 'error' ? msgerr = (JSON.stringify(data["error"]["message"]) + JSON.stringify(data["error"])) : isSuccess = true;
+            });
+
+            let stt = response.status;
+            if (stt == 200) {
+                if (!msgerr) {
+                    toast.success("Lưu thành công!", {position: toast.POSITION.TOP_RIGHT});
+                } else {
+                    toast.error("Error:" + JSON.stringify(msgerr));
+                }
+            } else {
+                toast.error("Something is wrong, please check log for detail!");
+            }
+
+        }).then(() => {
+            this.setState({isSubmiting: false});
+        })
+    }
+
     renderProductList() {
         console.log("renderProductList");
         return (
             <Table responsive bordered hover style={{height: '300px'}}>
                 <thead>
                 <tr key="header">
-                    <th>Action</th>
+                    <th>
+                        <Button.Group
+                            style={{display: (this.state.activeItem == 'Hotel' || this.state.activeItem == 'FoodOption' || this.state.activeItem == 'RoomsType') ? '' : 'none'}}>
+                            <Button positive inverted color='teal'
+                                    onClick={this.addItemProduct}>
+                                Add
+                            </Button>
+                            {/*<Button.Or/>*/}
+                            {/*<Button inverted color='grey'>Delete</Button>*/}
+                        </Button.Group>
+                    </th>
                     {this.state.headerRow.map(item => {
                         return <th key={item}>{item}</th>
                     })
@@ -212,16 +383,20 @@ export class AdminPage extends React.Component {
                 {
                     this.state.bodyRow.map(item => {
                         return <RowRender onChange={this.handleChangeRowValue}
+                                          onDelete={this.handleDeleteRow}
                                           headerRow={this.state.headerRow}
                                           onAction={this.handleAction}
+                                          activeItem={this.state.activeItem}
                                           key={item + Math.random()}>{item}</RowRender>
                     })
                 }
                 </tbody>
                 <tfoot>
-                    <td colSpan={this.state.headerRow.length + 1}>
-                        <Button primary>Submit Change</Button>
-                    </td>
+                <tr>
+                    <td colSpan={this.state.headerRow.length + 1} hidden={this.state.headerRow.length <= 0}
+                        onClick={this.handleSubmitAllChange}><Button
+                        primary>Submit Change</Button></td>
+                </tr>
                 </tfoot>
             </Table>
         );
@@ -233,6 +408,7 @@ export class AdminPage extends React.Component {
         let activeItem = this.state.activeItem;
         return (
             <Segment>
+                <ToastContainer style={{fontSize: '20px', textAlign: 'center'}}/>
                 <Menu tabular widths="5" icon='labeled'
                       size={isMobile.CheckDevices().match(/Windows|Mac/i) ? 'massive' : 'mini'} compact>
                     <Menu.Item
@@ -243,14 +419,12 @@ export class AdminPage extends React.Component {
                         <Icon name='building outline'/>
                         Hotel
                     </Menu.Item>
-
                     <Menu.Item
                         name='FoodOption'
                         active={activeItem === 'FoodOption'}
                         onClick={this.handleItemClick}
                     >
                         <Icon><i className="fas fa-utensils"></i></Icon>
-                        {/*<i className="fas fa-utensils"></i>*/}
                         Drink & Food
                     </Menu.Item>
                     <Menu.Item
@@ -278,12 +452,29 @@ export class AdminPage extends React.Component {
                         User
                     </Menu.Item>
                 </Menu>
+                {this.state.activeItem.length > 0 &&
                 <Segment>
-                    <div>
-                        {this.state.activeItem}
-                        {this.renderProductList()}
-                    </div>
-                </Segment>
+                    {(this.state.isDataLoaded == true && this.state.activeItem.length > 0) ?
+                        <div>
+                            <div style={{display: this.state.isSubmiting ? 'none' : ''}}>
+                                {this.renderProductList()}
+                            </div>
+                            <div style={{display: !this.state.isSubmiting ? 'none' : ''}}>
+                                <Dimmer active inverted>
+                                    <Loader size='large'>Dữ liệu đang được đồng bộ...</Loader>
+                                </Dimmer>
+                                <Image src='images/loader.png'/>
+                            </div>
+                        </div>
+                        :
+                        <Segment>
+                            <Dimmer active inverted>
+                                <Loader size='large'>Loading</Loader>
+                            </Dimmer>
+                            <Image src='images/loader.png'/>
+                        </Segment>
+                    }
+                </Segment>}
                 <a href="/">Back to Home</a>
             </Segment>
         )
@@ -318,6 +509,7 @@ class RowRender extends React.Component {
         };
         this.handleChangeColl = this.handleChangeColl.bind(this);
         this.handleSelectAction = this.handleSelectAction.bind(this);
+        this.handleChangeDeleteColl = this.handleChangeDeleteColl.bind(this);
     }
 
     componentDidMount() {
@@ -328,6 +520,11 @@ class RowRender extends React.Component {
         this.setState({
             colls: cells
         });
+    }
+
+    handleChangeDeleteColl(data) {
+        console.log(data);
+        this.props.onDelete(data);
     }
 
     handleChangeColl(coll) {
@@ -354,7 +551,9 @@ class RowRender extends React.Component {
             <tr key={row + Math.random()}>
                 <td>
                     <PortalEditProduct headerRow={this.props.headerRow} data={this.state.colls}
+                                       activeItem={this.props.activeItem}
                                        handleSelectAction={this.handleSelectAction}
+                                       onChangedelete={this.handleChangeDeleteColl}
                                        onChangeValue={this.handleChangeColl}/>
                 </td>
                 {
@@ -391,7 +590,7 @@ class CollRender extends React.Component {
         return (
             <td key={this.state.coll + Math.random()}>
                 {/*<Input value={Object.values(this.state.coll)} onChange={this.handleChangeInput}/>*/}
-                <p>{Object.values(this.state.coll)}</p>
+                <p>{isNaN(Object.values(this.state.coll)) ? Object.values(this.state.coll) : formatNumber(Object.values(this.state.coll))}</p>
             </td>
         )
     }
