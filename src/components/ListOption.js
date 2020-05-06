@@ -3,7 +3,7 @@ import {Button, Form, Input, Dropdown, Divider, Grid, Label, Statistic} from 'se
 import PropTypes from "prop-types";
 import TableBT from 'react-bootstrap/Table';
 import {Segment} from 'semantic-ui-react';
-import { ToastContainer, toast } from 'react-toastify';
+import {toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import '../App.css';
 
@@ -13,7 +13,6 @@ function formatNumber(num) {
 
 export class ListOption extends React.Component {
     constructor(props) {
-        console.log('constructor');
         super(props);
         this.state = {
             items: this.props.listoptionIds.slice(0, this.props.optionListSelected.length),
@@ -38,7 +37,6 @@ export class ListOption extends React.Component {
     }
 
     componentDidMount() {
-        console.log('componentDidMount');
         let listOptionSlt = this.props.optionListSelected;
         let listOptionSltIds = [];
         listOptionSlt && listOptionSlt.map(item => {
@@ -53,7 +51,6 @@ export class ListOption extends React.Component {
         });
 
 
-        //get List option for select
         var listoptionIdstmp = {};
         var listoptionIds = [];
 
@@ -77,7 +74,6 @@ export class ListOption extends React.Component {
 
 
     handleAddRow() {
-        console.log('handleAddRow');
         const option = {...this.state.option};
         let optionListSelected = this.state.optionListSelected;
         let flagNew = true;
@@ -94,7 +90,7 @@ export class ListOption extends React.Component {
                 break;
             }
         }
-        console.log(optionListSelected);
+
         if (flagNew) {
             optionListSelected.push(option);
         }
@@ -106,7 +102,6 @@ export class ListOption extends React.Component {
     }
 
     handleRemoveRow() {
-        console.log('handleRemoveRow');
         const optionListSelected = this.state.optionListSelected;
         optionListSelected.pop();
         this.setState({
@@ -117,15 +112,14 @@ export class ListOption extends React.Component {
     }
 
     handleChangeQuantity(event, data) {
-        console.log('handleChangeQuantity');
         if(!data){
             return;
         }
         if (isNaN(data.value)) {
             return
         } else {
-            if (parseInt(data.value) < 0 || parseInt(data.value) > 100) {
-                toast.info('Số lượng phải từ 0 - 100');
+            if (parseInt(data.value) < 0) {
+                toast.info('Số lượng phải lớn hơn 0.');
                 return;
             }
         }
@@ -139,7 +133,6 @@ export class ListOption extends React.Component {
     }
 
     handleChangeDropdown(event, data) {
-        console.log('handleChangeDropdown');
         const listoption = this.props.listoption;
         let tmp = [];
         for (let i = 0; i < listoption.length; i++) {
@@ -160,23 +153,12 @@ export class ListOption extends React.Component {
     handleOptionOtherChange(val, data){
         let tmp = {...this.state.option};
         tmp['total'] = (parseInt(data.value) ? parseInt(data.value) : 0);
-        console.log(tmp);
         this.setState({
            option: tmp
         });
     }
 
     render() {
-        console.log('render');
-        const items = this.state.optionListSelected;
-
-        // console.log(items);
-        // console.log(this.props.listoptionIds);
-        // console.log(this.props.listoption);
-        // console.log(this.props.optionListSelected);
-        // console.log(this.state.listoptionIds)
-        // console.log(this.state.optionListSelected);
-        // debugger;
         var total_option = 0;
         var count = 0;
         return (
@@ -190,7 +172,7 @@ export class ListOption extends React.Component {
                                     <Dropdown
                                         options={this.state.listoptionIds}
                                         value={this.state.option.optionid}
-                                        placeholder='Choose an option'
+                                        placeholder='Chọn loại SP:'
                                         selection
                                         onChange={this.handleChangeDropdown}
                                     />
@@ -213,13 +195,9 @@ export class ListOption extends React.Component {
                                     </Label>
                                     <br/>
                                     <br/>
-                                    {/*<Label style={{display: this.state.errMessQuantity}} basic color='red'*/}
-                                    {/*       pointing='left'>*/}
-                                    {/*    Số lượng từ phải từ 0 - 100*/}
-                                    {/*</Label>*/}
                                 </Form>
 
-                                <Divider horizontal>Total</Divider>
+                                <Divider horizontal>Tổng:</Divider>
 
                                 {this.state.option.description.startsWith("Other")
                                     ? <div>
@@ -232,7 +210,7 @@ export class ListOption extends React.Component {
                                      </Statistic>
                                 }
 
-                                <Button content='Add' icon='plus square' size='big' color='grey'
+                                <Button content='Thêm' icon='plus square' size='big' color='grey'
                                         onClick={this.handleAddRow}
                                         disabled={this.state.option.optionid == 0 || this.state.option.optionid == null || this.state.option.quantity == 0 || this.state.option.total == 0}/>
                             </Grid.Column>
@@ -247,7 +225,7 @@ export class ListOption extends React.Component {
                         <th></th>
                         <th>
                             <Button
-                                label='Remove'
+                                label='Xoá'
                                 disabled={this.state.optionListSelected.length === 0}
                                 icon='minus square'
                                 onClick={this.handleRemoveRow}

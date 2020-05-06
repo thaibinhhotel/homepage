@@ -1,12 +1,11 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import {Form, Input, Image, Loader, Segment, Dimmer, Label, Breadcrumb} from 'semantic-ui-react';
+import {Form, Image, Loader, Segment, Dimmer, Label} from 'semantic-ui-react';
 import {ListRoomRows} from '../components/ListRoomRows';
 import 'semantic-ui-css/semantic.min.css';
 import {toast} from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import '../App.css';
-import {encrypt} from '../components/sha256';
 
 const isMobile = {
     Android: function () {
@@ -66,7 +65,6 @@ export class IndexPage extends React.Component {
     }
 
     async getListRoomDetails(filter) {
-        console.log("getListRoomDetails");
         this.setState({
             isLoadedRooms: false,
         });
@@ -78,10 +76,8 @@ export class IndexPage extends React.Component {
                     let ids = [];
                     let tmp = [];
                     let tmp2 = {};
-                    console.log(result);
                     for (let i = 0; i < result.length; i++) {
                         tmp = JSON.parse(result[i])
-                        console.log(tmp)
                         strs.push(tmp);
                         tmp2 = {};
                         tmp2['key'] = tmp['roomid'];
@@ -115,7 +111,6 @@ export class IndexPage extends React.Component {
     }
 
     getListStatus() {
-        console.log("getListStatus");
         fetch("https://script.google.com/macros/s/AKfycby1NCjArXNvliviV9Su8imyfVXsNTUL2memG4bxJhX4JTcyoXGr/exec?func=listStatus&token=" + this.props.userInfo.token)
             .then(res => res.json())
             .then(
@@ -147,7 +142,6 @@ export class IndexPage extends React.Component {
     }
 
     getlistoption() {
-        console.log("getlistoption");
         fetch("https://script.google.com/macros/s/AKfycby1NCjArXNvliviV9Su8imyfVXsNTUL2memG4bxJhX4JTcyoXGr/exec?func=listoption&token=" + this.props.userInfo.token)
             .then(res => res.json())
             .then(
@@ -174,7 +168,6 @@ export class IndexPage extends React.Component {
     }
 
     getroomTypeOther() {
-        console.log("getroomTypeOther");
         fetch("https://script.google.com/macros/s/AKfycby1NCjArXNvliviV9Su8imyfVXsNTUL2memG4bxJhX4JTcyoXGr/exec?func=PricebyOther&token=" + this.props.userInfo.token)
             .then(res => res.json())
             .then(
@@ -206,7 +199,6 @@ export class IndexPage extends React.Component {
     }
 
     async UpdateCheckInRoom(id, checkinTime, roomClass, options, totalOptionPrice, roomId, noteText) {
-        console.log(noteText);
         let formatted_date = '';
         if (isMobile.iOS()) {
             formatted_date = checkinTime;
@@ -232,7 +224,6 @@ export class IndexPage extends React.Component {
             let msgerr = '';
             let isSuccess = false;
             await response.json().then(function (data) {
-                console.log(data);
                 data['result'] == 'error' ? msgerr = (JSON.stringify(data["error"]["message"]) + JSON.stringify(data["error"])) : isSuccess = true;
             });
 
@@ -253,17 +244,6 @@ export class IndexPage extends React.Component {
     }
 
     async CheckoutRoom(id, checkinTime, roomClass, options, totalOptionPrice, roomId, action, checkoutTime, totalRoomPrice, totalPrice, noteText) {
-        console.log("CheckoutRoom index page");
-        console.log(id);
-        console.log(checkinTime);
-        console.log(roomClass);
-        console.log(options);
-        console.log(totalOptionPrice);
-        console.log(roomId);
-        console.log(action);
-        console.log(checkoutTime);
-        console.log(noteText);
-
         let formatted_date = '';
         let formattedcheckout_date = '';
         if (isMobile.iOS()) {
@@ -275,9 +255,6 @@ export class IndexPage extends React.Component {
             formatted_date = current_datetime.getFullYear() + "-" + (current_datetime.getMonth() + 1) + "-" + current_datetime.getDate() + " " + current_datetime.getHours() + ":" + current_datetime.getMinutes() + ":" + current_datetime.getSeconds();
             formattedcheckout_date = current_Checkoutdatetime.getFullYear() + "-" + (current_Checkoutdatetime.getMonth() + 1) + "-" + current_Checkoutdatetime.getDate() + " " + current_Checkoutdatetime.getHours() + ":" + current_Checkoutdatetime.getMinutes() + ":" + current_Checkoutdatetime.getSeconds();
         }
-
-        // console.log(formatted_date);
-        // console.log(formattedcheckout_date);
 
         let encoded = "checkinTime=" + formatted_date +
             "&roomClass=" + roomClass +
@@ -322,7 +299,6 @@ export class IndexPage extends React.Component {
     }
 
     handleClearSearching() {
-        console.log("handleClearSearching");
         this.setState({
             roomidselected: '',
             statusSelected: '',
@@ -330,7 +306,7 @@ export class IndexPage extends React.Component {
         this.getListRoomDetails();
         this.getlistoption();
         this.getroomTypeOther();
-
+        this.getListStatus();
     }
 
     handleChangeRoomIDSelect(event, val = null) {
@@ -361,7 +337,7 @@ export class IndexPage extends React.Component {
         if (this.state.isLoadedParam == false) {
             return (<Segment>
                 <Dimmer active inverted>
-                    <Loader size='large'>Loading</Loader>
+                    <Loader size='large'>Đang tải</Loader>
                 </Dimmer>
                 <Image src='images/loader.png'/>
             </Segment>);
@@ -374,7 +350,7 @@ export class IndexPage extends React.Component {
         if (!this.state.isLoadedRooms || !this.state.isLoadedParam) {
             styleDisable = {'pointerEvents': 'none'};
         }
-        var newlistRoomIds = '';
+
         if (listRoomIds.length > 0) {
             listRoomIds.map((item) => {
                 let tmp = {
@@ -387,7 +363,7 @@ export class IndexPage extends React.Component {
         }
         return (
             <Segment padded style={styleDisable}>
-                <Label attached='top left' onClick={this.handleClearSearching}>Refresh</Label>
+                <Label attached='top left' onClick={this.handleClearSearching}>Cập nhật lại</Label>
                 <br/>
                 <Form.Group widths='equal'>
                     <Form.Select
@@ -397,7 +373,7 @@ export class IndexPage extends React.Component {
                         value={this.state.roomidselected}
                         onChange={this.handleChangeRoomIDSelect}
                         options={listRoomIds}
-                        placeholder='RoomIDs'
+                        placeholder='Phòng'
                     />
                     <Form.Select
                         fluid
@@ -406,7 +382,7 @@ export class IndexPage extends React.Component {
                         value={this.state.statusSelected}
                         options={listStatusIds}
                         onChange={this.handleChangeStatusIDSelect}
-                        placeholder='Status'
+                        placeholder='Trạng thái'
                     />
                 </Form.Group>
             </Segment>
@@ -414,13 +390,12 @@ export class IndexPage extends React.Component {
     }
 
     renderListRooms() {
-        console.log("renderListRooms");
         const {rooms, statusIds, roomTypeOtherIds, listoptionIds, listoption} = {...this.state};
 
         if (this.state.isLoadedRooms == false) {
             return (<Segment>
                 <Dimmer active inverted>
-                    <Loader size='large'>Loading</Loader>
+                    <Loader size='large'>Đang tải</Loader>
                 </Dimmer>
                 <Image src='images/loader.png'/>
             </Segment>);
@@ -428,7 +403,7 @@ export class IndexPage extends React.Component {
 
         return (
             <Segment padded>
-                <Label attached='top'>Room List</Label>
+                <Label attached='top'>Danh sách phòng:</Label>
                 <ListRoomRows roomsInfo={rooms}
                               statusList={statusIds}
                               roomTypeOther={roomTypeOtherIds}
@@ -442,7 +417,7 @@ export class IndexPage extends React.Component {
     }
 
     async sha256(message) {
-        console.log(encrypt("bangth"));
+
     }
 
     getIPAddress() {
@@ -480,7 +455,6 @@ export class IndexPage extends React.Component {
         }).then(res => res.json())
             .then(
                 (result) => {
-                    console.log(result);
                     this.setState({
                         ipadd: result["ip"],
                     })
@@ -491,7 +465,6 @@ export class IndexPage extends React.Component {
     }
 
     componentDidMount() {
-        console.log(this.props.userInfo);
         this.getIPAddress();
         this.getListRoomDetails();
         this.getListStatus();
@@ -500,9 +473,6 @@ export class IndexPage extends React.Component {
     }
 
     render() {
-        console.log("render");
-        // console.log(this.state.statusIds);
-        // console.log(this.state.statusSelected);
         return (
             <div>
                 <Form>

@@ -1,7 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import { RoomDetailCheckin } from '../components/RoomDetailCheckin';
-import { RoomDetailCheckout } from '../components/RoomDetailCheckout';
 import 'semantic-ui-css/semantic.min.css';
 
 export class ListRoomRows extends React.Component {
@@ -62,7 +61,6 @@ export class ListRoomRows extends React.Component {
     }
 
     render() {
-        // console.log(this.props.roomInfo);
         return (
             <div className="row">
                 {this.renderRow()}

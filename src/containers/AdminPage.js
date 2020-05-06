@@ -4,11 +4,12 @@ import PropTypes from 'prop-types';
 import 'semantic-ui-css/semantic.min.css';
 import {
     Dimmer, Image,
-    Loader, Segment, Grid, Menu, Icon, Form, Input, Dropdown, Button, Header
+    Loader, Segment, Menu, Icon, Button
 } from 'semantic-ui-react';
 import cookie from 'react-cookies';
 import Table from 'react-bootstrap/Table';
 import PortalEditProduct from '../components/admin/PortalEditProduct';
+import MainReportPage from '../components/admin/report/MainReportPage';
 import {toast} from 'react-toastify';
 import {ToastContainer} from "react-toastify";
 import {encrypt} from "../components/sha256";
@@ -88,8 +89,6 @@ export class AdminPage extends React.Component {
         }).then(res => res.json())
             .then(
                 (result) => {
-                    console.log(result["ip"]);
-
                     let userInfo = {...this.state.userInfo};
                     userInfo['ipAddress'] = result["ip"]
                     this.setState({
@@ -117,8 +116,6 @@ export class AdminPage extends React.Component {
             "&role=admin" +
             "&ipAddress=" + ipAddress;
 
-        console.log(encoded);
-
         let isValid = false;
         fetch('https://script.google.com/macros/s/AKfycby1NCjArXNvliviV9Su8imyfVXsNTUL2memG4bxJhX4JTcyoXGr/exec?func=checkToken', {
             method: 'POST',
@@ -129,7 +126,6 @@ export class AdminPage extends React.Component {
         }).then(async function (response) {
             let msgerr = '';
             await response.json().then(function (data) {
-                console.log(data);
                 data['result'] == 'error' ? msgerr = JSON.stringify(data["error"]) : isValid = true;
             });
         }).then(() => {
@@ -148,9 +144,6 @@ export class AdminPage extends React.Component {
     }
 
     componentDidMount() {
-        console.log("Cookie")
-        console.log(cookie.load('tokenTBh'));
-        console.log(cookie.load('emailTBh'));
         if (!this.state.userInfo.token) {
             this.setState({
                 isTokenValid: false,
@@ -161,13 +154,12 @@ export class AdminPage extends React.Component {
     }
 
     clearCookie() {
-        cookie.remove('tokenTBh', {path: '/'});
-        cookie.remove('emailTBh', {path: '/'});
-        cookie.remove('userNameTBh', {path: '/'});
+        cookie.remove('tokenTBh', {path: "/homepage"});
+        cookie.remove('emailTBh', {path: "/homepage"});
+        cookie.remove('userNameTBh', {path: "/homepage"});
     }
 
     getListAdminEdit(action) {
-        console.log("getListRoomDetails");
         this.setState({
             isDataLoaded: false,
         });
@@ -177,10 +169,8 @@ export class AdminPage extends React.Component {
                 (result) => {
                     let strs = [];
                     let tmp = [];
-                    console.log(result);
                     for (let i = 0; i < result.length; i++) {
                         tmp = JSON.parse(result[i])
-                        console.log(tmp)
                         strs.push(tmp);
                     }
                     // strs = new Set(strs);
@@ -240,9 +230,6 @@ export class AdminPage extends React.Component {
     }
 
     handleDeleteRow(data) {
-        console.log("handleDeleteRow");
-        console.log(data);
-        console.log(this.state.bodyRow);
         if (this.state.bodyRow.length == 1) {
             toast.error("Bạn không được xoá hết.");
             return;
@@ -259,7 +246,6 @@ export class AdminPage extends React.Component {
     }
 
     handleChangeRowValue(newrow) {
-        console.log(newrow);
         let bodyRow = [...this.state.bodyRow];
         for (let i = 0; i < bodyRow.length; i++) {
             if (Object.keys(bodyRow[i])[0] == Object.keys(newrow)[0] && Object.values(bodyRow[i])[0] == Object.values(newrow)[0]) {
@@ -272,14 +258,12 @@ export class AdminPage extends React.Component {
     }
 
     handleAction(action, data) {
-        console.log(action);
-        console.log(data);
 
     }
 
     addItemProduct() {
         if (!(this.state.activeItem == 'Hotel' || this.state.activeItem == 'FoodOption' || this.state.activeItem == 'RoomsType')) {
-            toast.error("Please contact bangth to add more Item");
+            toast.error("Liên hệ với Bangth để thêm.");
             return;
         }
         let bodyRow = this.state.bodyRow;
@@ -336,7 +320,6 @@ export class AdminPage extends React.Component {
             let msgerr = '';
             let isSuccess = false;
             await response.json().then(function (data) {
-                console.log(data);
                 data['result'] == 'error' ? msgerr = (JSON.stringify(data["error"]["message"]) + JSON.stringify(data["error"])) : isSuccess = true;
             });
 
@@ -357,7 +340,6 @@ export class AdminPage extends React.Component {
     }
 
     renderProductList() {
-        console.log("renderProductList");
         return (
             <Table responsive bordered hover style={{height: '300px'}}>
                 <thead>
@@ -367,7 +349,7 @@ export class AdminPage extends React.Component {
                             style={{display: (this.state.activeItem == 'Hotel' || this.state.activeItem == 'FoodOption' || this.state.activeItem == 'RoomsType') ? '' : 'none'}}>
                             <Button positive inverted color='teal'
                                     onClick={this.addItemProduct}>
-                                Add
+                                Thêm
                             </Button>
                             {/*<Button.Or/>*/}
                             {/*<Button inverted color='grey'>Delete</Button>*/}
@@ -395,7 +377,7 @@ export class AdminPage extends React.Component {
                 <tr>
                     <td colSpan={this.state.headerRow.length + 1} hidden={this.state.headerRow.length <= 0}
                         onClick={this.handleSubmitAllChange}><Button
-                        primary>Submit Change</Button></td>
+                        primary>Lưu tất cả thay đổi</Button></td>
                 </tr>
                 </tfoot>
             </Table>
@@ -403,8 +385,6 @@ export class AdminPage extends React.Component {
     }
 
     renderListFunc() {
-        console.log("renderListFunc");
-        console.log(navigator.userAgent);
         let activeItem = this.state.activeItem;
         return (
             <Segment>
@@ -469,13 +449,16 @@ export class AdminPage extends React.Component {
                         :
                         <Segment>
                             <Dimmer active inverted>
-                                <Loader size='large'>Loading</Loader>
+                                <Loader size='large'>Đang tải</Loader>
                             </Dimmer>
                             <Image src='images/loader.png'/>
                         </Segment>
                     }
                 </Segment>}
-                <a href="/">Back to Home</a>
+                <Segment>
+                    <MainReportPage/>
+                </Segment>
+                <a href="/homepage">Về lại trang chủ.</a>
             </Segment>
         )
     }
@@ -483,10 +466,9 @@ export class AdminPage extends React.Component {
     render() {
         let isTokenValid = this.state.isTokenValid;
         if (this.state.isChecking) {
-            // return <Loader size="massive" active inline='centered'>System is checking your permission...</Loader>
             return <Segment>
                 <Dimmer active inverted>
-                    <Loader size='large'>System is checking your permission...</Loader>
+                    <Loader size='large'>Hệ thống đang kiểm tra người dùng...</Loader>
                 </Dimmer>
                 <Image src='images/loader.png'/>
             </Segment>
@@ -496,7 +478,8 @@ export class AdminPage extends React.Component {
             this.renderListFunc()
             :
             <div>
-                Please <a href="/" onClick={this.clearCookie}>Login</a> by User Addmin to access this Page
+                Bạn phải <a href="/homepage" onClick={this.clearCookie}>Đăng nhập</a> bằng User Admin để sử dụng chức
+                năng này.
             </div>);
     }
 }
@@ -513,7 +496,6 @@ class RowRender extends React.Component {
     }
 
     componentDidMount() {
-        console.log(this.props.children);
         let cells = Object.keys(this.props.children).map((i) => {
             return {[i]: this.props.children[i]}
         })
@@ -523,12 +505,10 @@ class RowRender extends React.Component {
     }
 
     handleChangeDeleteColl(data) {
-        console.log(data);
         this.props.onDelete(data);
     }
 
     handleChangeColl(coll) {
-        console.log(this.state.colls);
         let tmprow = [...this.state.colls];
         let newrow = {};
         for (let i = 0; i < tmprow.length; i++) {
@@ -577,7 +557,6 @@ class CollRender extends React.Component {
     }
 
     componentDidMount() {
-        console.log(this.state.coll);
     }
 
     handleChangeInput(event, data) {

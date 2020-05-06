@@ -9,11 +9,11 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import 'semantic-ui-css/semantic.min.css';
 import {
     Dimmer, Image,
-    Loader, Segment, Button
+    Loader, Segment
 } from 'semantic-ui-react';
 import {ToastContainer} from "react-toastify";
 import cookie from 'react-cookies';
-import {BrowserRouter, Route, Link} from "react-router-dom";
+import {BrowserRouter, Route} from "react-router-dom";
 
 const isMobile = {
     CheckDevices: function () {
@@ -87,8 +87,6 @@ class ThaiBinhHotel extends React.Component {
         }).then(res => res.json())
             .then(
                 (result) => {
-                    console.log(result["ip"]);
-
                     let userInfo = {...this.state.userInfo};
                     userInfo['ipAddress'] = result["ip"]
                     this.setState({
@@ -110,18 +108,10 @@ class ThaiBinhHotel extends React.Component {
     }
 
     async checkTokenValid(ipAddress) {
-        // let token = sessionStorage.getItem('tokenTBh');
-        // let email = sessionStorage.getItem('emailTBh');
-        // let ipAddress = this.getIPAddress();
-        console.log(this.state.userInfo);
         let encoded = "token=" + this.state.userInfo.token +
             "&email=" + this.state.userInfo.email +
             "&deviceName=" + this.state.userInfo.deviceName +
             "&ipAddress=" + ipAddress;
-
-        console.log(encoded);
-        console.log(isMobile.CheckDevices());
-
         let isValid = false;
         fetch('https://script.google.com/macros/s/AKfycby1NCjArXNvliviV9Su8imyfVXsNTUL2memG4bxJhX4JTcyoXGr/exec?func=checkToken', {
             method: 'POST',
@@ -132,7 +122,6 @@ class ThaiBinhHotel extends React.Component {
         }).then(async function (response) {
             let msgerr = '';
             await response.json().then(function (data) {
-                console.log(data);
                 data['result'] == 'error' ? msgerr = JSON.stringify(data["error"]) : isValid = true;
             });
         }).then(() => {
@@ -151,11 +140,6 @@ class ThaiBinhHotel extends React.Component {
     }
 
     componentDidMount() {
-        // sessionStorage.setItem('tokenTBh', 'fb28ea0172706c801ce7d4e1d4edcb5f');
-        // sessionStorage.setItem('emailTBh', 'bang.th@mobivi.vn');
-        console.log("Cookie")
-        console.log(cookie.load('tokenTBh'));
-        console.log(cookie.load('emailTBh'));
         if (!this.state.userInfo.token) {
             this.setState({
                 isTokenValid: false,
@@ -168,10 +152,9 @@ class ThaiBinhHotel extends React.Component {
     render() {
         let isTokenValid = this.state.isTokenValid;
         if (this.state.isChecking) {
-            // return <Loader size="massive" active inline='centered'>System is checking your permission...</Loader>
             return <Segment>
                 <Dimmer active inverted>
-                    <Loader size='large'>System is checking your permission...</Loader>
+                    <Loader size='large'>Hệ thống đang kiểm tra người dùng</Loader>
                 </Dimmer>
                 <Image src='images/loader.png'/>
             </Segment>
@@ -196,9 +179,9 @@ class AppMain extends React.Component {
                 <div>
                     <hr/>
                     <div>
-                        <Route exact path="/" component={ThaiBinhHotel}/>
-                        <Route path="/admin" component={admin}/>
-                        <Route path="/logout" component={logout}/>
+                        <Route exact path="/homepage" component={ThaiBinhHotel}/>
+                        <Route path="/homepage/admin" component={admin}/>
+                        <Route path="/homepage/logout" component={logout}/>
                     </div>
                 </div>
             </BrowserRouter>
@@ -208,11 +191,10 @@ class AppMain extends React.Component {
 
 class logout extends React.Component {
     render() {
-        console.log("remove");
-        cookie.remove('tokenTBh', {path: '/hompage'});
-        cookie.remove('emailTBh', {path: '/hompage'});
-        cookie.remove('userNameTBh', {path: '/hompage'});
-        window.location.href = "/";
+        cookie.remove('tokenTBh', {path: '/homepage'});
+        cookie.remove('emailTBh', {path: '/homepage'});
+        cookie.remove('userNameTBh', {path: '/homepage'});
+        window.location.href = "/homepage";
         return "";
     }
 }
@@ -232,7 +214,7 @@ class GreetUser extends React.Component {
             info ?
                 <div>
                     {info}
-                    <a href="/logout"><h6>Logout</h6></a>
+                    <a href="/homepage/logout"><h6>Thoát</h6></a>
                 </div>
                 :
                 <div>
@@ -253,8 +235,8 @@ class AcctionBottom extends React.Component {
                             href="https://docs.google.com/spreadsheets/d/1ZRQ1m7W-rKciypYBbtgSswODZj8qdOWmW2JLb6GTVX8/"
                             target="_blank" className="icon brands fa-google-drive"><span className="label"></span></a>
                         </li>
-                        <li><a href="/" className="icon solid fa-home"><span className="label"></span></a></li>
-                        <li><a href="/admin" className="fas fa-tools"><span className="label"></span></a></li>
+                        <li><a href="/homepage" className="icon solid fa-home"><span className="label"></span></a></li>
+                        <li><a href="/homepage/admin" className="fas fa-tools"><span className="label"></span></a></li>
                     </ul>
                 </div>
                 :

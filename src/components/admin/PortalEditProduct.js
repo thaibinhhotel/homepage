@@ -4,10 +4,8 @@ import {
     Button, Dropdown,
     Header,
     Segment,
-    TransitionablePortal, Input, Form, Label
+    TransitionablePortal, Input, Form
 } from 'semantic-ui-react'
-import Table from 'react-bootstrap/Table';
-import {encrypt} from '../sha256';
 
 export default class PortalEditProduct extends React.Component {
     constructor(props) {
@@ -45,13 +43,9 @@ export default class PortalEditProduct extends React.Component {
     }
 
     componentDidMount() {
-        console.log("Portal")
-        console.log(this.props.data);
-        // debugger;
         for (let i = 0; i < this.props.data.length; i++) {
             let tmp = this.props.data[i];
             Object.values(tmp).map(item => {
-                console.log(item);
                 this.setState({
                     ["field" + (i + 1)]: item,
                 });
@@ -60,14 +54,12 @@ export default class PortalEditProduct extends React.Component {
     }
 
     handleChangeSave() {
-        console.log(this.props.data);
         let newrow = [...this.props.data];
         for (let i = 0; i < newrow.length; i++) {
             let tmp = newrow[i];
             tmp[Object.keys(tmp)[0]] = this.state['field' + (i + 1)];
         }
 
-        console.log(newrow);
         this.props.onChangeValue(newrow);
     }
 
@@ -94,7 +86,7 @@ export default class PortalEditProduct extends React.Component {
                     >
                         <Form>
                             <div style={{width: '300px', margin: 'auto'}}>
-                                <Header style={{backgroundColor: 'lavender'}}><h3>Detail</h3></Header>
+                                <Header style={{backgroundColor: 'lavender'}}><h3>Chi tiết</h3></Header>
                                 {this.state.isDelete ?
                                     <div>
                                         <b>Bạn chắc chắn muốn xoá "{this.state.field2}" chứ?</b>
@@ -122,7 +114,7 @@ export default class PortalEditProduct extends React.Component {
                                             })
                                         }}/>
                                         {this.props.headerRow[2] != "Status" ?
-                                            <Input fluid id="2" list='languages'
+                                            <Input fluid id="2"
                                                    placeholder={this.props.headerRow[2] ? this.props.headerRow[2] : ''}
                                                    labelPosition="right"
                                                    label={this.props.headerRow[2] ? this.props.headerRow[2] : ''}
@@ -219,9 +211,9 @@ export default class PortalEditProduct extends React.Component {
                                 <div style={{textAlign: 'center'}}>
                                     <p>Xem kỹ thông tin trước khi lưu.</p>
                                     {!this.state.isDelete ?
-                                        <Button color='yellow' basic onClick={this.handleChangeSave}>Save</Button> :
-                                        <Button color='yellow' basic onClick={this.handleChangeDelete}>Delete</Button>}
-                                    <Button color='yellow' basic onClick={this.handleClose}>Close</Button>
+                                        <Button color='yellow' basic onClick={this.handleChangeSave}>Lưu</Button> :
+                                        <Button color='yellow' basic onClick={this.handleChangeDelete}>Xoá</Button>}
+                                    <Button color='yellow' basic onClick={this.handleClose}>Đóng</Button>
                                 </div>
                             </div>
 

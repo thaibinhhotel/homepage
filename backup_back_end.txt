@@ -1,0 +1,1008 @@
+function doPost2(e) {
+try {
+    record_data_new(e);
+    return ContentService
+        .createTextOutput(
+            JSON.stringify({"result":"success"}))
+          .setMimeType(ContentService.MimeType.JSON);
+  } catch(error) {
+    var doc = SpreadsheetApp.getActiveSpreadsheet();
+    var sheetName = "LogErr";
+    var sheet = doc.getSheetByName(sheetName);
+
+    var nextRow = sheet.getLastRow() + 1;
+    var row = [];
+    row.push(JSON.stringify({"error": error}));
+    sheet.getRange(nextRow, 1).setValues([row]);
+    
+    return ContentService
+        .createTextOutput(JSON.stringify({"result":"error", "error": error}))
+          .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+
+function record_data_new(e) {
+    try{
+        var rand = (Math.floor(Math.random() * 2000) + 500);
+        Utilities.sleep(rand);
+    } catch(error) {
+        var sendEmailTo = "bang.th@mobivi.vn";
+        if (sendEmailTo) {
+            MailApp.sendEmail({
+                to: String(sendEmailTo),
+                subject: "Something went wrong in Sleep Function! ",
+                htmlBody: "err:" + JSON.stringify({"error": error})
+            });
+        }
+        //var doc = SpreadsheetApp.getActiveSpreadsheet();
+        //var sheetName = "LogErr";
+        //var sheet = doc.getSheetByName(sheetName);
+        //
+        //var nextRow = sheet.getLastRow() + 1;
+        //var row = [];
+        //row.push(JSON.stringify({"error": error}));
+        //        sheet.getRange(nextRow, 1).setValues([row]);
+    } finally {
+        try {
+            // select the 'responses' sheet by default
+            var lock = LockService.getScriptLock();
+            lock.waitLock(3600000);
+            //if (lock.tryLock(300000))  { //We got the lockedFile
+            //if(lock.hasLock()){
+            var doc = SpreadsheetApp.getActiveSpreadsheet();
+            var sheetName = "responses";
+            var sheet = doc.getSheetByName(sheetName);
+
+            //var count = sheet.getRange("I1").getValue();
+            //var sheetId = Math.floor(count/100);
+            //if(sheetId >=1){
+            //   sheetName = "responses" + sheetId;
+            //   sheet = doc.getSheetByName(sheetName);
+            //}
+
+            var oldHeader = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+            var newHeader = oldHeader.slice();
+            var fieldsFromForm = getDataColumns(e.parameters);
+            var row = [Utilities.formatDate(new Date(), "GMT+7", "yyyy-MM-dd'  'HH:mm:ss' '")];
+
+
+            // loop through the header columns
+            for (var i = 1; i < oldHeader.length; i++) { // start at 1 to avoid Timestamp column
+                var field = oldHeader[i];
+                var output = getFieldFromData(field, e.parameters);
+                row.push(output);
+
+                // mark as stored by removing from form fields
+                var formIndex = fieldsFromForm.indexOf(field);
+                if (formIndex > -1) {
+                    fieldsFromForm.splice(formIndex, 1);
+                }
+            }
+            // set any new fields in our form
+            for (var i = 0; i < fieldsFromForm.length; i++) {
+                var field = fieldsFromForm[i];
+                var output = getFieldFromData(field, e.parameters);
+                row.push(output);
+                newHeader.push(field);
+            }
+
+            // more efficient to set values as [][] array than individually
+            var nextRow = sheet.getLastRow() + 1; // get next row
+            sheet.getRange(nextRow, 1, 1, row.length).setValues([row]);
+
+            // update header row with any new data
+            if (newHeader.length > oldHeader.length) {
+                sheet.getRange(1, 1, 1, newHeader.length).setValues([newHeader]);
+            }
+            //} else { // We couldn’t get the lock, send mail for more detail
+            //  var mailData = e.parameters;
+            //  var orderParameter = e.parameters.formDataNameOrder;
+            //  var dataOrder;
+            //  var errmsg = "Try Get Locked File Fail";
+            //  if (orderParameter) {
+            //    dataOrder = JSON.parse(orderParameter);
+            //  }
+            // var sendEmailTo = "bang.th@mobivi.vn";
+            //  if (sendEmailTo) {
+            //    MailApp.sendEmail({
+            //      to: String(sendEmailTo),
+            //      subject: "Try Get Locked File Fail",
+            //     htmlBody: formatMailBody(mailData, dataOrder,errmsg)
+            //    });
+            //  }
+            //}
+        }
+        catch(error) {
+            //var doc = SpreadsheetApp.getActiveSpreadsheet();
+            //var sheetName = "LogErr";
+            //var sheet = doc.getSheetByName(sheetName);
+            
+            //var nextRow = sheet.getLastRow() + 1;
+            //var row = [];
+            //row.push(JSON.stringify({"error": error}));
+            //        sheet.getRange(nextRow, 1).setValues([row]);
+            PropertiesService.getScriptProperties().setProperty('err', JSON.stringify({"error": error}));
+        }
+        finally {
+            var errmsg = PropertiesService.getScriptProperties().getProperty('err');
+            if(errmsg != "none"){
+              // var mailData = e.parameters;
+              // var orderParameter = e.parameters.formDataNameOrder;
+              // var dataOrder;
+              // if (orderParameter) {
+              //     dataOrder = JSON.parse(orderParameter);
+              // }
+              // var sendEmailTo = "bang.th@mobivi.vn";
+              // if (sendEmailTo) {
+              //     MailApp.sendEmail({
+              //         to: String(sendEmailTo),
+              //         subject: "Something went wrong! ",
+              //         htmlBody: formatMailBody(mailData, dataOrder,errmsg)
+              //     });
+              // }
+          
+              var doc = SpreadsheetApp.getActiveSpreadsheet();
+              var sheetName = "Record_Error";
+              var sheet = doc.getSheetByName(sheetName);
+          
+              var nextRow = sheet.getLastRow() + 1;
+              var row = [];
+              row.push(JSON.stringify({"error_record": e,"Err_msg": errmsg}));
+              sheet.getRange(nextRow, 1).setValues([row]);
+            }
+            PropertiesService.getScriptProperties().setProperty('err', 'none');
+            lock.releaseLock();
+            return;
+        }
+    }
+}
+
+function getDataColumns(data) {
+  return Object.keys(data).filter(function(column) {
+    return !(column === 'formDataNameOrder' || column === 'formGoogleSheetName' || column === 'formGoogleSendEmail' || column === 'honeypot' || column === 'func');
+  });
+}
+
+function getFieldFromData(field, data) {
+  var values = data[field] || '';
+  var output = '';
+  if(field == 'checkinTime'){
+    return values;
+  } else {
+      output = values.join ? values.join(', ') : values;
+  }
+  return output;
+}
+
+// sanitize content from the user - trust no one 
+// ref: https://developers.google.com/apps-script/reference/html/html-output#appendUntrusted(String)
+function sanitizeInput(rawInput) {
+   var placeholder = HtmlService.createHtmlOutput(" ");
+   placeholder.appendUntrusted(rawInput);
+  
+   return placeholder.getContent();
+}
+function formatMailBody(obj, order, errmsg) {
+  var result = "<h2>Message Err:" + errmsg +"</h2> <br/><br/><h2>Data Err:</h2> <br/><br/>";
+  if (!order) {
+    order = Object.keys(obj);
+  }
+  
+  // loop over all keys in the ordered form data
+  for (var idx in order) {
+    var key = order[idx];
+    result += "<h4 style='text-transform: capitalize; margin-bottom: 0'>" + key + "</h4><div>" + sanitizeInput(obj[key]) + "</div>";
+  }
+  return result;
+}
+
+function getListOption(){
+        var doc = SpreadsheetApp.getActiveSpreadsheet();
+        var tableName = "tblOptionParam";
+        var sheet = doc.getSheetByName(tableName);
+
+        var lastRow = sheet.getLastRow();
+
+        var row = [];
+        var tmp = "";
+        for(var i = 2; i <= lastRow; i++){
+            tmp = JSON.stringify({optionId: (i-1),
+                description: sheet.getRange(i,2).getValue(),
+                price: sheet.getRange(i,3).getValue(),
+            });
+            row.push(tmp);
+        }
+        return JSON.stringify(row);
+}
+
+function getlistRoomsDetail(){
+        var doc = SpreadsheetApp.getActiveSpreadsheet();
+        var tableName = "tblRoom";
+        var sheet = doc.getSheetByName(tableName);
+
+        var lastRow = sheet.getLastRow();
+        sheet.getRange("A1").setValue("roomid");
+    
+        var row = [];
+        var tmp = "";
+        for(var i = 2; i <= lastRow; i++){
+            tmp = JSON.stringify({roomid: sheet.getRange(i,1).getValue(),
+                roomDescription: sheet.getRange(i,2).getValue(),
+                status: sheet.getRange(i,3).getValue(),
+                roomCurrentClass: sheet.getRange(i,4).getValue(),
+                fromTime: sheet.getRange(i,15).getValue(),
+                toTime: sheet.getRange(i,16).getValue(),
+                durationByHour: sheet.getRange(i,7).getValue(),
+                durationByFay: sheet.getRange(i,8).getValue(),
+                moreOptionId: sheet.getRange(i,9).getValue(),
+                optionPriceTtotal: sheet.getRange(i,10).getValue(),
+                roomPrice: sheet.getRange(i,11).getValue(),
+                noteText: sheet.getRange(i,12).getValue(),
+                totalPrice: sheet.getRange(i,13).getValue(),
+                id: sheet.getRange(i,14).getValue()
+            });
+            row.push(tmp);
+        }
+        
+        return JSON.stringify(row);
+}
+
+function getlistRoomDetail(){
+        var doc = SpreadsheetApp.getActiveSpreadsheet();
+        var tableName = "tblRoom";
+        var sheet = doc.getSheetByName(tableName);
+
+        var lastRow = sheet.getLastRow();
+        sheet.getRange("A1").setValue("roomid");
+    
+        var row = [];
+        var tmp = "";
+        for(var i = 2; i <= lastRow; i++){
+            tmp = JSON.stringify({id: (i-1),
+                                  roomid: sheet.getRange(i,1).getValue(),
+                                  roomDescription: sheet.getRange(i,2).getValue(),
+                
+            });
+            row.push(tmp);
+        }
+        
+        return JSON.stringify(row);
+}
+
+function getlistStatus(){
+        var doc = SpreadsheetApp.getActiveSpreadsheet();
+        var tableName = "tblStatus";
+        var sheet = doc.getSheetByName(tableName);
+
+        var lastRow = sheet.getLastRow();
+
+        var row = [];
+        var tmp = "";
+        for(var i = 2; i <= lastRow; i++){
+            tmp = JSON.stringify({statusId: sheet.getRange(i,1).getValue(),
+                description: sheet.getRange(i,2).getValue()         
+            });
+            row.push(tmp);
+        }
+        return JSON.stringify(row);
+}
+
+function getlistUser(){
+        var doc = SpreadsheetApp.getActiveSpreadsheet();
+        var tableName = "tblUser";
+        var sheet = doc.getSheetByName(tableName);
+
+        var lastRow = sheet.getLastRow();
+
+        var row = [];
+        var tmp = "";
+        for(var i = 2; i <= lastRow; i++){
+            if(sheet.getRange(i,3).getValue() != "admin"){
+              tmp = JSON.stringify({UserName: sheet.getRange(i,1).getValue(), 
+                                    Description: sheet.getRange(i,2).getValue(),
+                                    Status: sheet.getRange(i,3).getValue(),
+                                    PassWord: ""
+              });
+              row.push(tmp);
+            }
+        }
+        return JSON.stringify(row); 
+}
+
+function getPriceByHour(){
+        var doc = SpreadsheetApp.getActiveSpreadsheet();
+        var tableName = "tblPricebyHour";
+        var sheet = doc.getSheetByName(tableName);
+
+        var lastRow = sheet.getLastRow();
+
+        var row = [];
+        var tmp = "";
+        for(var i = 2; i <= lastRow; i++){
+            tmp = JSON.stringify({id: (i-1), from: sheet.getRange(i,1).getValue(),
+                to: sheet.getRange(i,2).getValue(),
+                price: sheet.getRange(i,3).getValue()         
+            });
+            row.push(tmp);
+        }
+        return JSON.stringify(row);
+}
+
+function getPriceByOther(){
+        var doc = SpreadsheetApp.getActiveSpreadsheet();
+        var tableName = "tblPricebyOther";
+        var sheet = doc.getSheetByName(tableName);
+
+        var lastRow = sheet.getLastRow();
+
+        var row = [];
+        var tmp = "";
+        for(var i = 2; i <= lastRow; i++){
+            tmp = JSON.stringify({roomType: sheet.getRange(i,1).getValue(),
+                description: sheet.getRange(i,2).getValue(),
+                price: sheet.getRange(i,3).getValue()         
+            });
+            row.push(tmp);
+        }
+        return JSON.stringify(row);
+}
+
+function getPriceByOthers(){
+        var doc = SpreadsheetApp.getActiveSpreadsheet();
+        var tableName = "tblPricebyOther";
+        var sheet = doc.getSheetByName(tableName);
+
+        var lastRow = sheet.getLastRow();
+
+        var row = [];
+        var tmp = "";
+        for(var i = 2; i <= lastRow; i++){
+            tmp = JSON.stringify({id: (i-1),roomType: sheet.getRange(i,1).getValue(),
+                description: sheet.getRange(i,2).getValue(),
+                price: sheet.getRange(i,3).getValue()         
+            });
+            row.push(tmp);
+        }
+        return JSON.stringify(row);
+}
+
+function getReportDetail(e){
+        var doc = SpreadsheetApp.getActiveSpreadsheet();
+        var sheetName = "tblBookingDetail";
+        var yearmonth = e["parameter"]["yearmonth"];
+        sheetName = sheetName + "_" + yearmonth ; 
+        var sheet = doc.getSheetByName(sheetName);
+
+        var lastRow = sheet.getLastRow();
+        var row = [];
+        var tmp = "";
+        for(var i = 2; i <= lastRow; i++){
+            tmp = JSON.stringify({roomid: sheet.getRange(i,1).getValue(),
+                roomClass: sheet.getRange(i,2).getValue(),
+                checkinTime: sheet.getRange(i,3).getValue(),
+                checkoutTime: sheet.getRange(i,4).getValue(),
+                options: sheet.getRange(i,5).getValue(),
+                totalOptionPrice: sheet.getRange(i,6).getValue(),
+                totalRoomPrice: sheet.getRange(i,7).getValue(),
+                totalPrice: sheet.getRange(i,8).getValue()
+            });
+            row.push(tmp);
+        }
+        
+        return JSON.stringify(row);
+}
+
+function submitCheckIn(e){
+        var doc = SpreadsheetApp.getActiveSpreadsheet();
+        var sheetName = "tblRoom";
+        var sheet = doc.getSheetByName(sheetName);
+        
+        var data = getDataColumns(e.parameters);
+        var id = parseInt(e["parameter"]["id"]);
+            
+        for (var i = 0; i < data.length; i++) {
+            var field = data[i];
+            var output = getFieldFromData(field, e.parameters);
+            //sheet.getRange(i+1,15).setValue(output);
+            //sheet.getRange(i+1,16).setValue(field);
+            switch(field){
+              case "checkinTime":
+                sheet.getRange(id,5).setValue(output);
+                break;
+              case "roomClass":
+                sheet.getRange(id,4).setValue(output);
+                break;
+              case "options":
+                sheet.getRange(id,9).setValue(output);
+                break;
+             case "noteText":
+                sheet.getRange(id,12).setValue(output);              
+                break;              
+              case "totalOptionPrice":
+                sheet.getRange(id,10).setValue(output);              
+                break;
+            }
+        }
+        sheet.getRange(id,3).setValue(0);    //set status = 0 khi co ng dat phong          
+        //sheet.getRange(10,1).setValue(JSON.stringify(e));
+        //sheet.getRange(11,1).setValue(JSON.stringify(data));
+}
+
+function getCheckoutInfo(e){
+        var doc = SpreadsheetApp.getActiveSpreadsheet();
+        var sheetName = "tmptblRoomForCheckout";
+        var sheet = doc.getSheetByName(sheetName);
+        
+        var data = getDataColumns(e.parameters);
+        var id = 2;
+            
+        for (var i = 0; i < data.length; i++) {
+            var field = data[i];
+            var output = getFieldFromData(field, e.parameters);
+            switch(field){
+              case "checkinTime":
+                sheet.getRange(id,5).setValue(output);
+                break;
+              case "roomClass":
+                sheet.getRange(id,4).setValue(output);
+                break;
+              case "options":
+                sheet.getRange(id,9).setValue(output);
+                break;
+              case "totalOptionPrice":
+                sheet.getRange(id,10).setValue(output);              
+                break;
+              case "checkoutTime":
+                sheet.getRange(id,6).setValue(output);              
+                break;
+            }
+        }
+       
+        Utilities.sleep(1000);
+        return {roomPrice: sheet.getRange(id,11).getValue(), totalPrice: sheet.getRange(id,13).getValue()};
+}
+
+function verifyemail(e){
+        var email = e["parameter"]["email"];
+        var ipAddress = e["parameter"]["ipAddress"];
+        var deviceName = e["parameter"]["deviceName"];                
+        var rand = (Math.floor(Math.random() * 2000) + 1000);
+        
+        var doc = SpreadsheetApp.getActiveSpreadsheet();
+        var sheetName = "tblUser";
+        var sheet = doc.getSheetByName(sheetName);
+        var lastrow = sheet.getLastRow();
+        
+        var doc2 = SpreadsheetApp.getActiveSpreadsheet();
+        var sheetName2 = "tblLoginRequest";
+        var sheet2 = doc2.getSheetByName(sheetName2);
+        var lastrow2 = sheet2.getLastRow() + 1;
+        sheet2.getRange(lastrow2,1).setValue(email);
+        sheet2.getRange(lastrow2,2).setValue(ipAddress);
+        sheet2.getRange(lastrow2,3).setValue(deviceName);
+        
+        for(var i=2; i<= lastrow; i++){
+            if(sheet.getRange(i,1).getValue() == email){                
+                if( sheet.getRange(i,5).getValue() == ipAddress && sheet.getRange(i,6).getValue() == deviceName && 
+                    (sheet.getRange(i,3).getValue() == "active" || sheet.getRange(i,3).getValue() == "admin")){
+                    sheet.getRange(i,11).setValue(rand);
+                    if (email) {
+                        var body = "<h4 style='text-transform: capitalize; margin-bottom: 0'>Your Pin_Code:</h4><div>" + rand + "</div>";
+                        MailApp.sendEmail({
+                            to: String(email),
+                            subject: "Verify Mail Address(Device: "+ deviceName +" & Public_IP: "+ ipAddress +")." ,
+                            htmlBody: body
+                        });
+                    }
+                    return JSON.stringify({"result":"success"});
+                }
+            }
+        }
+        return JSON.stringify({"result":"error", "error": "Email is invalid!"});
+}
+
+function checkToken(e){
+        var token = e["parameter"]["token"];
+        var email = e["parameter"]["email"];
+        var ipAddress = e["parameter"]["ipAddress"];
+        var deviceName = e["parameter"]["deviceName"];        
+
+        var doc = SpreadsheetApp.getActiveSpreadsheet();
+        var sheetName = "tblUser";
+        var sheet = doc.getSheetByName(sheetName);
+        var lastrow = sheet.getLastRow();
+        
+        for(var i=2; i<= lastrow; i++){
+            if(sheet.getRange(i,1).getValue() == email){                
+                if(sheet.getRange(i,4).getValue() == token && 
+                   sheet.getRange(i,5).getValue() == ipAddress && sheet.getRange(i,6).getValue() == deviceName &&
+                   (new Date()) < (new Date(sheet.getRange(i,8).getValue()))){
+                   if(e["parameter"]["role"]){
+                      if(e["parameter"]["role"] == "admin"){
+                          if(sheet.getRange(i,3).getValue() != "admin"){
+                            return JSON.stringify({"result":"error", "error": "User is not allow to access Page!"});
+                          }
+                      }
+                    } else {
+                        if(sheet.getRange(i,3).getValue() != "active" && sheet.getRange(i,3).getValue() != "admin"){
+                            return JSON.stringify({"result":"error", "error": "User is invalid!"});
+                        }
+                    }
+                    return JSON.stringify({"result":"success"});
+                }
+            }
+        }
+        return JSON.stringify({"result":"error", "error": "Token is invalid!"});
+}
+
+function login(e){
+        var email = e["parameter"]["email"];
+        var pass = e["parameter"]["pass"];
+        var pincode = e["parameter"]["pincode"];
+        var deviceName = e["parameter"]["deviceName"];        
+        var ipAddress = e["parameter"]["ipAddress"];
+        var rand = (Math.floor(Math.random() * 2000) + 1000);
+        
+        var doc = SpreadsheetApp.getActiveSpreadsheet();
+        var sheetName = "tblUser";
+        var sheet = doc.getSheetByName(sheetName);
+        var lastrow = sheet.getLastRow();
+        //sheet.getRange(1,15).setValue(pass + ' ' + email + ' ' + ipAddress);   
+        for(var i=2; i<= lastrow; i++){         
+            if(sheet.getRange(i,1).getValue() == email){        
+                if (sheet.getRange(i,9).getValue() == pass && sheet.getRange(i,11).getValue() == pincode &&
+                    sheet.getRange(i,5).getValue() == ipAddress && 
+                    sheet.getRange(i,6).getValue() == deviceName)
+                    {
+                    if(e["parameter"]["role"]){
+                      if(e["parameter"]["role"] == "admin"){
+                          if(sheet.getRange(i,3).getValue() != "admin"){
+                            return JSON.stringify({"result":"error", "error": "User is not allow to access Page!"});
+                          }
+                      }
+                    } else {
+                        if(sheet.getRange(i,3).getValue() != "active" && sheet.getRange(i,3).getValue() != "admin"){
+                            return JSON.stringify({"result":"error", "error": "User is invalid!"});
+                        }
+                    }
+                    var token = MD5(email + pass + ipAddress + rand);
+                    sheet.getRange(i,10).setValue(new Date());
+                    sheet.getRange(i,4).setValue(token);
+                    return JSON.stringify({"result":"success","token":token,"username": sheet.getRange(i,2).getValue()});
+                }
+            }
+        }
+        return JSON.stringify({"result":"error", "error": "User is invalid!"});
+}
+
+function checkAuthPermission(e, role) {
+        var token = e["parameter"]["token"];
+        //var role = e["parameter"]["role"];       
+        var doc = SpreadsheetApp.getActiveSpreadsheet();
+        var sheetName = "tblUser";
+        var sheet = doc.getSheetByName(sheetName);
+        var lastrow = sheet.getLastRow();
+        
+        for(var i=2; i<= lastrow; i++){
+            if(sheet.getRange(i,4).getValue() == token){
+                if((new Date()) < (new Date(sheet.getRange(i,8).getValue()))){
+                      if(role == "admin"){
+                          if(sheet.getRange(i,3).getValue() == role){
+                              return true;
+                          } else {
+                              return false;
+                          }
+                      } else {
+                          return true;
+                      }
+                } else {
+                      return false;
+                }
+            }
+        }
+        return false;
+}
+
+function Checkout(e){
+        var doc = SpreadsheetApp.getActiveSpreadsheet();
+        var sheetName = "tblBookingDetail";
+       
+        var checkoutTime = e["parameter"]["checkoutTime"];
+        var YearMonth = checkoutTime.substr(0, 7).replace("-", "");
+        sheetName = sheetName + "_" +YearMonth ; 
+        
+        var activeSpreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+        var yourNewSheet = activeSpreadsheet.getSheetByName(sheetName);
+        if (yourNewSheet == null) {
+            yourNewSheet = activeSpreadsheet.insertSheet();
+            yourNewSheet.setName(sheetName);
+        }
+        var sheet = doc.getSheetByName(sheetName);        
+
+        var data = getDataColumns(e.parameters);
+        var id = sheet.getLastRow() + 1;
+            
+        for (var i = 0; i < data.length; i++) {
+            var field = data[i];
+            var output = getFieldFromData(field, e.parameters);
+            switch(field){
+              case "checkinTime":
+                sheet.getRange(id,3).setValue(output);
+                break;
+              case "roomClass":
+                sheet.getRange(id,2).setValue(output);
+                break;
+              case "options":
+                sheet.getRange(id,5).setValue(output);
+                break;
+              case "totalOptionPrice":
+                sheet.getRange(id,6).setValue(output);              
+                break;
+              case "checkoutTime":
+                sheet.getRange(id,4).setValue(output);              
+                break;
+              case "totalRoomPrice":
+                sheet.getRange(id,7).setValue(output);              
+                break;
+              case "roomId":
+                sheet.getRange(id,1).setValue(output);              
+                break;
+              case "noteText":
+                sheet.getRange(id,9).setValue(output);              
+                break;
+              case "totalPrice":
+                sheet.getRange(id,8).setValue(output);              
+                break;
+            }
+        }
+        
+        //Reset Room
+        var docnew = SpreadsheetApp.getActiveSpreadsheet();
+        var sheetNamenew = "tblRoom";
+        var sheetnew = docnew.getSheetByName(sheetNamenew);
+       
+        var id = parseInt(e["parameter"]["id"]);
+        sheetnew.getRange(id,3).setValue(1);  
+        sheetnew.getRange(id,4).setValue("Hour");  
+        sheetnew.getRange(id,5).setValue("");              
+        sheetnew.getRange(id,6).setValue("");              
+        sheetnew.getRange(id,9).setValue("[]");              
+        sheetnew.getRange(id,10).setValue(0);              
+        sheetnew.getRange(id,12).setValue("");              
+}
+
+function MD5(input) {
+        var rawHash = Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, input);
+        var txtHash = '';
+        for (i = 0; i < rawHash.length; i++) {
+          var hashVal = rawHash[i];
+          if (hashVal < 0) {
+            hashVal += 256;
+          }
+          if (hashVal.toString(16).length == 1) {
+            txtHash += '0';
+          }
+          txtHash += hashVal.toString(16);
+        }
+        return txtHash;
+}
+
+function updateRoomList(e){
+        var doc = SpreadsheetApp.getActiveSpreadsheet();
+        var dataJson = e["parameter"]["jsonDataEncode"];   
+        var sheetName = "tblRoom";
+        var sheet = doc.getSheetByName(sheetName);               
+        
+        var newrowsjson = JSON.parse(dataJson);
+        sheet.getRange("A3:R100").setValue("");
+        for(var i = 0; i < newrowsjson.length; i ++)
+        {
+            var newrow = JSON.parse(newrowsjson[i]);
+            var fields = getDataColumns(newrow);
+            for (var j = 0; j < fields.length; j++) {
+              var field = fields[j];
+              var output = getFieldFromData(field, newrow);
+              switch(field){
+                  case "roomid":
+                    sheet.getRange(i+2,1).setValue(output);
+                    break;
+                  case "roomDescription":
+                    sheet.getRange(i+2,2).setValue(output);
+                    break;
+               }                       
+            }
+            sheet.getRange(i+2,3).setValue(1);
+            //sheet.getRange(i+2,4).setValue("Hour");               
+            sheet.getRange(i+2,7).setValue(sheet.getRange(2,7).getFormulaR1C1());
+            sheet.getRange(i+2,8).setValue(sheet.getRange(2,8).getFormulaR1C1());
+            sheet.getRange(i+2,11).setValue(sheet.getRange(2,11).getFormulaR1C1());               
+            sheet.getRange(i+2,13).setValue(sheet.getRange(2,13).getFormulaR1C1());               
+            sheet.getRange(i+2,14).setValue(sheet.getRange(2,14).getFormulaR1C1());         
+            sheet.getRange(i+2,15).setValue(sheet.getRange(2,15).getFormulaR1C1());         
+            sheet.getRange(i+2,16).setValue(sheet.getRange(2,16).getFormulaR1C1()); 
+        }
+        return "";
+}
+
+function updateFoodOption(e){
+        var doc = SpreadsheetApp.getActiveSpreadsheet();
+        var dataJson = e["parameter"]["jsonDataEncode"];   
+        var sheetName = "tblOptionParam";
+        var sheet = doc.getSheetByName(sheetName);              
+        
+        var newrowsjson = JSON.parse(dataJson);
+        sheet.getRange("A3:R100").setValue("");
+        for(var i = 0; i < newrowsjson.length; i ++)
+        {
+            var newrow = JSON.parse(newrowsjson[i]);
+            var fields = getDataColumns(newrow);
+            for (var j = 0; j < fields.length; j++) {
+              var field = fields[j];
+              var output = getFieldFromData(field, newrow);
+              switch(field){
+                  case "description":
+                    sheet.getRange(i+2,2).setValue(output);
+                    break;
+                  case "price":
+                    sheet.getRange(i+2,3).setValue(output);
+                    break;
+               }
+            }
+            sheet.getRange(i+2,1).setValue(sheet.getRange(2,1).getFormulaR1C1());                       
+        }
+        return "";
+}
+
+function updateRoomPrice(e){
+        var doc = SpreadsheetApp.getActiveSpreadsheet();
+        var dataJson = e["parameter"]["jsonDataEncode"];   
+        var sheetName = "tblPricebyHour";
+        var sheet = doc.getSheetByName(sheetName);              
+        
+        var newrowsjson = JSON.parse(dataJson);
+        sheet.getRange("C2:C4").setValue("");  
+        if(newrowsjson.length != 3){
+            return ""
+        }
+        for(var i = 0; i < newrowsjson.length; i ++)
+        {
+            var newrow = JSON.parse(newrowsjson[i]);
+            var fields = getDataColumns(newrow);
+            for (var j = 0; j < fields.length; j++) {
+              var field = fields[j];
+              var output = getFieldFromData(field, newrow);
+              switch(field){
+                  case "price":
+                    sheet.getRange(i+2,3).setValue(output);
+                    break;
+               }
+            }                      
+        }
+        return "";
+}
+
+function updateRoomsType(e){
+        var doc = SpreadsheetApp.getActiveSpreadsheet();
+        var dataJson = e["parameter"]["jsonDataEncode"];   
+        var sheetName = "tblPricebyOther";
+        var sheet = doc.getSheetByName(sheetName);              
+        
+        var newrowsjson = JSON.parse(dataJson);
+        sheet.getRange("A2:C100").setValue("");  
+        for(var i = 0; i < newrowsjson.length; i ++)
+        {
+            var newrow = JSON.parse(newrowsjson[i]);
+            var fields = getDataColumns(newrow);
+            for (var j = 0; j < fields.length; j++) {
+              var field = fields[j];
+              var output = getFieldFromData(field, newrow);
+              switch(field){
+                  case "roomType":
+                    sheet.getRange(i+2,1).setValue(output);
+                    break;
+                  case "description":
+                    sheet.getRange(i+2,2).setValue(output);
+                    break;
+                  case "price":
+                    sheet.getRange(i+2,3).setValue(output);
+                    break;  
+               }
+            }                      
+        }
+        return "";
+}
+
+function updateUser(e){
+        var doc = SpreadsheetApp.getActiveSpreadsheet();
+        var dataJson = e["parameter"]["jsonDataEncode"];   
+        var sheetName = "tblUser";
+        var sheet = doc.getSheetByName(sheetName);              
+        var LastRow = sheet.getLastRow();
+            
+        var newrowsjson = JSON.parse(dataJson);
+        for(var i = 0; i < newrowsjson.length; i ++)
+        {
+            var newrow = JSON.parse(newrowsjson[i]);
+            var fields = getDataColumns(newrow);
+            var UserName = '';
+            var Description = '';  
+            var Status = '';  
+            var PassWord = '';  
+            for (var j = 0; j < fields.length; j++) {
+              var field = fields[j];
+              var output = getFieldFromData(field, newrow);
+              switch(field){
+                  case "UserName":
+                    UserName = output;
+                    break;
+                  case "Description":
+                    Description = output;
+                    break;
+                  case "Status":
+                    Status = output;
+                    break;
+                  case "PassWord":
+                    PassWord = output;
+                    break;  
+               }
+            }
+            for(var x = 0; x < LastRow; x++){
+                if(sheet.getRange(x+2,1).getValue() == UserName){
+                   sheet.getRange(x+2,2).setValue(Description);
+                   sheet.getRange(x+2,3).setValue(Status);
+                   if(PassWord != ""){
+                       sheet.getRange(x+2,9).setValue(PassWord);
+                       sheet.getRange(x+2,4).setValue("");
+                   }
+                }
+            }
+        }
+        return "";
+}
+
+function adminUpdateParam(e){   
+        var activeItem = e["parameter"]["activeItem"];      
+        var output = '';
+        switch(activeItem){
+            case "Hotel":
+              output = updateRoomList(e);
+              break;
+            case "FoodOption":
+              output = updateFoodOption(e);
+              break;              
+            case "RoomPrice":
+              output = updateRoomPrice(e);
+              break;  
+            case "RoomsType":
+              output = updateRoomsType(e);
+              break; 
+            case "User":
+              output = updateUser(e);
+              break; 
+        } 
+        return output;
+          
+}
+
+//Do Get: to get Data
+function doGet(e) {  
+  try {
+      var lock = LockService.getScriptLock();
+      lock.waitLock(360000);
+      if(!checkAuthPermission(e, "active")){
+        return ContentService.createTextOutput(JSON.stringify({"result":"error", "error": "User doesn't have permission to access!"})).setMimeType(ContentService.MimeType.JSON);
+      }
+      // select the 'responses' sheet by default
+      var actionName = e["parameter"]["func"];
+      var output = "";
+      
+      switch (actionName)  {
+          case "listoption":       
+              output = getListOption();
+              break;
+          case "listStatus":
+              output = getlistStatus();
+              break;
+          case "PricebyHour":
+              output = getPriceByHour();
+              break;
+          case "PricebyOther":
+              output = getPriceByOther();
+              break;
+          case "listRoomsDetail":
+              output = getlistRoomsDetail();
+              break;
+          case "PricebyOthers":
+              output = getPriceByOthers();
+              break;
+          case "listRoomDetail":
+              output = getlistRoomDetail();
+              break;    
+          case "ReportDetail":
+              output = getReportDetail(e);
+              break;
+          case "listUser":
+              output = getlistUser();
+              break;    
+      }
+                                          
+    return ContentService.createTextOutput(output).setMimeType(ContentService.MimeType.JSON);
+  } catch(error) {
+    var doc = SpreadsheetApp.getActiveSpreadsheet();
+    var sheetName = "LogErr";
+    var sheet = doc.getSheetByName(sheetName);
+
+    var nextRow = sheet.getLastRow() + 1;
+    var row = [];
+    row.push(JSON.stringify({"error": error}));
+    sheet.getRange(nextRow, 1).setValues([row]);
+    
+    return ContentService.createTextOutput(JSON.stringify({"result":"error", "error": error})).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function doPost(e) {
+try {
+    var lock = LockService.getScriptLock();
+    lock.waitLock(360000);
+    var actionName = e["parameter"]["func"];
+    var output = "";
+    
+    if(actionName == "checkToken"){
+        output = checkToken(e);
+        return ContentService .createTextOutput(output).setMimeType(ContentService.MimeType.JSON);
+    }
+    if(actionName == "verifyemail"){
+        output = verifyemail(e);
+        return ContentService .createTextOutput(output).setMimeType(ContentService.MimeType.JSON);
+    }
+    if(actionName == "login"){
+        output = login(e);
+        return ContentService .createTextOutput(output).setMimeType(ContentService.MimeType.JSON);
+    }
+    if(actionName == "ReportDetail"){
+        output = getReportDetail(e);
+        return ContentService .createTextOutput(output).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    if(actionName.match(/checkin|checkoutinfo|checkout/i)){
+        if(!checkAuthPermission(e, "active")){
+           return ContentService.createTextOutput(JSON.stringify({"result":"error", "error": "User doesn't have permission to access!"})).setMimeType(ContentService.MimeType.JSON);
+        }        
+        switch (actionName)  {
+            case "checkin":       
+                output = submitCheckIn(e);
+                break;
+            case "checkoutinfo":
+                output = getCheckoutInfo(e);
+                break;
+                checkToken
+            case "checkout":
+                output = Checkout(e);
+                break;
+        }
+    } else {
+        if(!checkAuthPermission(e, "admin")){
+           return ContentService.createTextOutput(JSON.stringify({"result":"error", "error": "User doesn't have permission to access!"})).setMimeType(ContentService.MimeType.JSON);
+        }
+        switch (actionName)  {
+            case "adminUpdateParam":       
+                output = adminUpdateParam(e);
+                break;
+        }
+    }
+    return ContentService.createTextOutput(JSON.stringify({"result":"success","data":output})).setMimeType(ContentService.MimeType.JSON);
+  } catch(error) {
+    var doc = SpreadsheetApp.getActiveSpreadsheet();
+    var sheetName = "LogErr";
+    var sheet = doc.getSheetByName(sheetName);
+
+    var nextRow = sheet.getLastRow() + 1;
+    var row = [];
+    row.push(JSON.stringify({"error": error}));
+    sheet.getRange(nextRow, 1).setValues([row]);
+    
+    return ContentService.createTextOutput(JSON.stringify({"result":"error", "error": error})).setMimeType(ContentService.MimeType.JSON);
+  }
+}

@@ -1,0 +1,90 @@
+function getDataColumns(data) {
+  return Object.keys(data).filter(function(column) {
+    return !(column === 'func');
+  });
+}
+
+function getFieldFromData(field, data) {
+  var values = data[field] || '';
+  var output = '';
+  output = values.join ? values.join(', ') : values;
+  return output;
+}
+
+function activityLogCallAPIFPT(e){
+  var doc = SpreadsheetApp.getActiveSpreadsheet();
+  var sheetName = "ActivitiLog_APIFTP";
+  
+  var yearmonth = e["parameter"]["yearmonth"];
+  sheetName = sheetName + "_" + yearmonth ;
+  var activeSpreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  var sheetnew = activeSpreadsheet.getSheetByName(sheetName);
+  if (sheetnew == null) {
+    sheetnew = activeSpreadsheet.insertSheet();
+    sheetnew.setName(sheetName);
+  }
+  var sheet = doc.getSheetByName(sheetName);
+  
+  var data = getDataColumns(e.parameters);
+  var id = 1;
+  
+  for (var i = 0; i < data.length; i++) {
+    var field = data[i];
+    var output = getFieldFromData(field, e.parameters);
+    switch(field){
+      case "jsonStr":
+        sheet.getRange(id,2).setValue(output);
+        break;
+    }
+  }
+  sheet.getRange(id,1).setValue(Utilities.formatDate(new Date(), "GMT+7", "yyyy-MM-dd'  'HH:mm:ss' '"));
+  return "success";
+}
+
+function doPost(e) {
+  try {
+    var lock = LockService.getScriptLock();
+    lock.waitLock(360000);
+
+    var actionName = e["parameter"]["func"];
+    var output = "";
+    
+    switch (actionName)  {
+      case "CallLogFpt":
+        output = activityLogCallAPIFPT(e);
+        break;
+    }
+    
+    return ContentService.createTextOutput(JSON.stringify({"result":"success","data":output})).setMimeType(ContentService.MimeType.JSON);
+  } catch(error) {
+    var doc = SpreadsheetApp.getActiveSpreadsheet();
+    var sheetName = "LogErr";
+    var sheet = doc.getSheetByName(sheetName);
+    
+    var nextRow = sheet.getLastRow() + 1;
+    var row = [];
+    row.push(JSON.stringify({"error": error}));
+    row.push(JSON.stringify({"record": e}));
+    sheet.getRange(nextRow, 1).setValues([row]);
+    
+    //return ContentService.createTextOutput(JSON.stringify({"result":"error", "error": error})).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function doGet(e) {  
+  try {
+      var lock = LockService.getScriptLock();
+      lock.waitLock(360000);
+      var doc = SpreadsheetApp.getActiveSpreadsheet();
+    var sheetName = "LogErr";
+    var sheet = doc.getSheetByName(sheetName);
+
+    var nextRow = sheet.getLastRow() + 1;
+    var row = [];
+    row.push(JSON.stringify({"error": e}));
+    sheet.getRange(nextRow, 1).setValues([row]);
+     
+  } catch(error) {
+  
+  }
+}

@@ -101,7 +101,6 @@ export class RoomDetailCheckin extends React.Component {
     }
 
     show = () => this.setState({open: true})
-    handleConfirm = () => this.setState({open: false})
     handleCancel = () => this.setState({open: false})
 
     checkoutRoomSubmit() {
@@ -154,6 +153,14 @@ export class RoomDetailCheckin extends React.Component {
             return;
         }
 
+        if(!this.state.checkoutInfo.totalRoomPrice || this.state.checkoutInfo.totalRoomPrice == 0){
+            toast.error('Bạn phải tính giá phòng trước khi kết thúc!');
+            this.setState({
+                isSubmiting: false
+            });
+            return;
+        }
+
         this.props.CheckoutSubmitRoom(id, checkinTime, roomClass, options, totalOptionPrice, roomId, action, checkoutTime, totalRoomPrice, totalPrice, noteText);
     }
 
@@ -161,7 +168,6 @@ export class RoomDetailCheckin extends React.Component {
         this.setState({
             isSubmiting: true
         });
-        let action = 'checkin';
         let roomId = this.props.roominfo.roomid;
         let id = this.props.roominfo.id;
         let noteText = this.state.noteText;
@@ -169,7 +175,6 @@ export class RoomDetailCheckin extends React.Component {
         let checkinTime = '';
         if (isMobile.iOS()) {
             checkinTime = this.state.CheckinDate + " " + this.state.CheckinTime;
-            console.log(checkinTime)
         } else {
             checkinTime = this.state.CheckinTimeSelected;
         }
@@ -368,9 +373,6 @@ export class RoomDetailCheckin extends React.Component {
             formattedcheckout_date = current_Checkoutdatetime.getFullYear() + "-" + (current_Checkoutdatetime.getMonth() + 1) + "-" + current_Checkoutdatetime.getDate() + " " + current_Checkoutdatetime.getHours() + ":" + current_Checkoutdatetime.getMinutes() + ":" + current_Checkoutdatetime.getSeconds();
         }
 
-        // console.log(formatted_date);
-        // console.log(formattedcheckout_date);
-
         let encoded = "checkinTime=" + formatted_date +
             "&roomClass=" + roomClass +
             "&options=" + options +
@@ -394,7 +396,7 @@ export class RoomDetailCheckin extends React.Component {
                 let stt = response.status;
                 if (stt == 200) {
                     if (!msgerr) {
-                        console.log(result);
+
                     } else {
                         toast.error("Error:" + JSON.stringify(msgerr));
                     }
@@ -453,11 +455,11 @@ export class RoomDetailCheckin extends React.Component {
                     <Modal.Description style={{width: '100%'}}>
                         <Header>{roominfo.roomDescription}</Header>
                         <b>
-                            Status: {this.getStatusDes(roominfo.status)}
+                            Trạng thái: {this.getStatusDes(roominfo.status)}
                         </b>
                         <hr/>
                         <label>
-                            <b>Checkin:</b>
+                            <b>Giờ vào:</b>
                         </label>
                         <div>
                             {!isMobile.iOS() ? <DateTimePicker value={this.state.CheckinTimeSelected}
@@ -474,7 +476,7 @@ export class RoomDetailCheckin extends React.Component {
                         <Segment padded style={{display: this.props.roominfo.status == 0 ? '' : 'none'}}>
                             <div>
                                 <label>
-                                    <b style={{color: "#00bfff"}}>CheckOut:</b>
+                                    <b style={{color: "#00bfff"}}>Giờ ra:</b>
                                 </label>
                                 {!isMobile.iOS() ? <DateTimePicker value={this.state.CheckoutTimeSelected}
                                                                    onChange={this.onChangePickedCheckoutTime}/> :
@@ -490,37 +492,36 @@ export class RoomDetailCheckin extends React.Component {
                                 <br/>
                                 <Button primary style={{float: 'left', width: '45%'}} size="large"
                                         onClick={this.getCheckoutInfo} disabled={this.state.isSubmiting}>
-                                    Check Price:
+                                    Tính tiền phòng:
                                 </Button>
                                 {this.state.isSubmiting ?
                                     <Input size='large' loading icon='user' disabled
                                            value={formatNumber(this.state.checkoutInfo.totalRoomPrice)}
                                            label={{basic: true, content: 'vnd'}}
-                                           labelPosition='right'
-                                           iconPosition='left' style={{width: "40%"}} placeholder='Search...'/>
+                                           labelPosition='right corner'
+                                           iconPosition='left' style={{width: "53%"}} placeholder='...vnd'/>
                                     :
                                     <Input size="large" icon='money bill alternate outline' disabled
                                            value={formatNumber(this.state.checkoutInfo.totalRoomPrice)}
                                            label={{basic: true, content: 'vnd'}}
-                                           labelPosition='right'
-                                           iconPosition='left' style={{width: "40%"}} placeholder='Search...'/>
+                                           labelPosition='right corner'
+                                           iconPosition='left' style={{width: "53%"}} placeholder='...vnd'/>
                                 }
                             </div>
                         </Segment>
                         <hr/>
                         <div>
                             <label>
-                                <b>Room Type:</b>
+                                <b>Loại phòng:</b>
                             </label>
                             <Form.Select
                                 fluid
                                 icon=''
                                 size="huge"
-                                // label='Room Type:'
                                 value={this.state.roomCurrentClass}
                                 options={roomTypeOther}
                                 onChange={this.handleChangeTypeIDSelect}
-                                placeholder='Type'
+                                placeholder='Chọn loại phòng...'
                             />
                         </div>
                         <hr/>
@@ -535,15 +536,15 @@ export class RoomDetailCheckin extends React.Component {
                 </Modal.Content>
                 <Modal.Actions>
                     <Button primary onClick={this.show}
-                            disabled={this.state.isSubmiting || this.state.checkoutInfo.totalPrice == 0}
+                            disabled={this.state.isSubmiting || this.state.checkoutInfo.totalRoomPrice == 0}
                             style={{display: (this.props.roominfo.status == 0 ? '' : 'none')}}>
                         CheckOut
                     </Button>
                     <Button primary onClick={this.checkinRoomSubmit} disabled={this.state.isSubmiting}>
-                        {this.props.roominfo.status == 1 ? "CheckIn" : "Update"}
+                        {this.props.roominfo.status == 1 ? "CheckIn" : "Cập nhật"}
                     </Button>
                     <Button primary onClick={this.handleHideModal} disabled={this.state.isSubmiting}>
-                        Close
+                        Đóng
                     </Button>
                 </Modal.Actions>
                 <Confirm
@@ -595,7 +596,7 @@ export class RoomDetailCheckin extends React.Component {
                             </Segment>
                         </div>
                     }
-                    header='Confirm CheckOut'
+                    header='Kiểm tra & xác nhận'
                     onCancel={this.handleCancel}
                     onConfirm={this.checkoutRoomSubmit}
                 />
