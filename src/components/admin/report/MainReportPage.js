@@ -2,10 +2,11 @@ import React, {Component} from 'react';
 import CanvasJSReact from '../../../assets/js/canvasjs.react';
 import cookie from "react-cookies";
 import {toast} from "react-toastify";
-import {Dropdown, Header, Icon} from 'semantic-ui-react';
+import {Dropdown, Header, Icon, Loader} from 'semantic-ui-react';
 // import CostReporting from '../components/admin/report/CostReporting';
 import CostReporting from './CostReporting';
 import ProductOptionUsing from './ProductOptionUsing';
+import {forEach} from "react-bootstrap/cjs/ElementChildren";
 
 var CanvasJSChart = CanvasJSReact.CanvasJSChart;
 var CanvasJS = CanvasJSReact.CanvasJS;
@@ -16,19 +17,88 @@ const optionsSelects = [
         text: 'Phòng',
         value: 'room',
         content: 'Doanh thu theo Phòng',
+    }
+]
+
+const optionsSelectsMonth = [
+    {
+        key: '201912',
+        text: '201912',
+        value: '201912',
+        content: '201912',
     },
     {
-        key: 'this week',
-        text: 'this week',
-        value: 'this week',
-        content: 'This Week',
+        key: '20201',
+        text: '2020-01',
+        value: '20201',
+        content: '2020-01',
     },
     {
-        key: 'this month',
-        text: 'this month',
-        value: 'this month',
-        content: 'This Month',
+        key: '20202',
+        text: '2020-02',
+        value: '20202',
+        content: '2020-02',
     },
+    {
+        key: '20203',
+        text: '2020-03',
+        value: '20203',
+        content: '2020-03',
+    },
+    {
+        key: '20204',
+        text: '2020-04',
+        value: '20204',
+        content: '2020-04',
+    },
+    {
+        key: '20205',
+        text: '2020-05',
+        value: '20205',
+        content: '2020-05',
+    },
+    {
+        key: '20206',
+        text: '2020-06',
+        value: '20206',
+        content: '2020-06',
+    },
+    {
+        key: '20207',
+        text: '2020-07',
+        value: '20207',
+        content: '2020-07',
+    },
+    {
+        key: '20208',
+        text: '2020-08',
+        value: '20208',
+        content: '2020-08',
+    },
+    {
+        key: '20209',
+        text: '2020-09',
+        value: '20209',
+        content: '2020-09',
+    },
+    {
+        key: '202010',
+        text: '2020-10',
+        value: '202010',
+        content: '2020-10',
+    },
+    {
+        key: '202011',
+        text: '2020-11',
+        value: '202011',
+        content: '2020-11',
+    },
+    {
+        key: '202012',
+        text: '2020-12',
+        value: '202012',
+        content: '2020-12',
+    }
 ]
 
 class MainReportPage extends Component {
@@ -40,13 +110,30 @@ class MainReportPage extends Component {
                 optionName: [],
                 optionCountOf: [],
                 optionTotal: []
-            }
+            },
+            optionLst: [
+                {
+                    label: "",
+                    y: 0
+                }
+            ],
+            revenueByRoom: [
+                {
+                    label: "",
+                    y: 0
+                }
+            ],
+            monthSelected: "201912",
+            isLoadingRpt1: true
         };
         [
             'addSymbols',
             'toggleDataSeries',
             'getOptionListValue',
-            'test'
+            'GetReportData',
+            'GetReportDataSummaryByRoom',
+            'getrevenueByRoomValue',
+            'handleChangeMonthDropdown'
         ].forEach((method) => this[method] = this[method].bind(this));
     }
 
@@ -55,8 +142,56 @@ class MainReportPage extends Component {
             "&reportName=" + reportName +
             "&token=" + cookie.load('tokenTBh');
         let result = [];
-
+        debugger;
         await fetch('https://script.google.com/macros/s/AKfycby1NCjArXNvliviV9Su8imyfVXsNTUL2memG4bxJhX4JTcyoXGr/exec?func=ReportDetail', {
+            method: 'POST',
+            body: encoded,
+            headers: {
+                "Content-type": "application/x-www-form-urlencoded"
+            }
+        }).then(async function (response) {
+            let msgerr = '';
+            await response.json().then(function (data) {
+
+                data['result'] == 'error' ? msgerr = (JSON.stringify(data["error"]["message"]) + JSON.stringify(data["error"])) : result = data['data'];
+                console.log(data);
+                result = data;
+            });
+
+            let stt = response.status;
+            if (stt == 200) {
+                if (!msgerr) {
+
+                } else {
+                    toast.error("Error:" + JSON.stringify(msgerr));
+                }
+            } else {
+                toast.error("Something is wrong, please check log for detail!");
+            }
+
+        }).then(() => {
+            if (result.length > 0) {
+                // debugger;
+                this.setState({
+                    allData: result,
+                    isLoadingRpt1: false
+                });
+                this.getOptionListValue();
+            }
+            this.setState({
+                isLoadingRpt1: false
+            });
+        })
+
+    }
+
+    async GetReportDataSummaryByRoom(yearMonth, reportName) {
+        let encoded = "yearmonth=" + yearMonth +
+            "&reportName=" + reportName +
+            "&token=" + cookie.load('tokenTBh');
+        let result = [];
+
+        await fetch('https://script.google.com/macros/s/AKfycby1NCjArXNvliviV9Su8imyfVXsNTUL2memG4bxJhX4JTcyoXGr/exec?func=ReportSummary', {
             method: 'POST',
             body: encoded,
             headers: {
@@ -84,39 +219,26 @@ class MainReportPage extends Component {
 
         }).then(() => {
             if (result.length > 0) {
-                this.setState({
-                    allData: result
-                });
-                this.getOptionListValue();
+                // debugger;
+                // this.setState({
+                //     revenueByRoom: result
+                // });
+                this.getrevenueByRoomValue(result);
             }
         })
-
     }
 
-    async test() {
-        let result = "{\"errorCode\":0,\"errorMessage\":\"\",\"data\":[{\"sex_prob\":\"N/A\",\"name\":\"PHẠM THỊ LOAN THẢO\",\"id_prob\":\"37.56\",\"type\":\"old\",\"doe_prob\":\"N/A\",\"name_prob\":\"7.51\",\"id\":\"341337333\",\"dob_prob\":\"66.41\",\"doe\":\"N/A\",\"nationality_prob\":\"N/A\",\"nationality\":\"N/A\",\"home_prob\":\"2.91\",\"address\":\"ĐÔNG BÌNH, HÒA AN, TX CAO LÃNH, ĐỒNG THÁP\",\"sex\":\"N/A\",\"home\":\"TÂN THUẬN ĐÔNG, TX CAO LÃNH, ĐỒNG THÁP\",\"address_prob\":\"2.16\",\"dob\":\"1985\"}]}";
-        let date = new Date();
-        let yearMonth = date.getFullYear().toString() + (date.getMonth() + 1).toString();
-        let encoded = "yearmonth=" + yearMonth +
-            "&jsonStr=" + result;
-
-        await fetch('https://script.google.com/macros/s/AKfycbweKULYa8P49p9oiGQ4XN_VswC5xn1DHRSZuImPjTYVWAcrDNF6/exec?func=CallLogFpt', {
-            method: 'POST',
-            body: encoded,
-            headers: {
-                "Content-type": "application/x-www-form-urlencoded"
-            }
-        }).then(async function (response) {
-            let msgerr = '';
-            await response.json().then(function (data) {
-                // debugger;
-                data['result'] == 'error' ? msgerr = (JSON.stringify(data["error"]["message"]) + JSON.stringify(data["error"])) : result = data['data'];
-                result = data;
-            });
-
-        }).then(() => {
-
-        })
+    getrevenueByRoomValue(result) {
+        const allData = [...result];
+        let resultReturn = [];
+        for (let i = 0; i < allData.length; i++) {
+            let item = JSON.parse(allData[i]);
+            resultReturn.push(item);
+        }
+        this.setState({
+            revenueByRoom: resultReturn
+        });
+        console.log(resultReturn);
     }
 
     getOptionListValue() {
@@ -126,7 +248,8 @@ class MainReportPage extends Component {
             optionTotal: []
         }
         const allData = [...this.state.allData];
-        // debugger;
+        let tmpoptionLst = [];
+
         for (let i = 0; i < allData.length; i++) {
             let item = JSON.parse(allData[i]);
             let options = JSON.parse(item.options == "" ? "[]" : item.options);
@@ -153,6 +276,14 @@ class MainReportPage extends Component {
                 console.log(option);
             }
         }
+
+        for (let i = 0; i < optionList.optionName.length; i++) {
+            tmpoptionLst.push({"label": optionList.optionName[i], "y": optionList.optionTotal[i]})
+        }
+        this.setState({
+            optionLst: tmpoptionLst
+        });
+
         console.log(optionList);
     }
 
@@ -175,16 +306,25 @@ class MainReportPage extends Component {
     }
 
     componentDidMount() {
-        //this.GetReportData("201912", "test");
+        let yearmonth = this.state.monthSelected;
+        this.GetReportDataSummaryByRoom(yearmonth, "test"); //Summary
+        this.GetReportData(yearmonth, "test"); //Detail
+    }
 
-        this.test();
+    handleChangeMonthDropdown(event, data) {
+        this.setState({
+            isLoadingRpt1: true
+        });
+        let yearmonth = data.value;
+        this.GetReportDataSummaryByRoom(yearmonth, "test"); //Summary
+        this.GetReportData(yearmonth, "test"); //Detail
     }
 
     render() {
         console.log("render");
-        console.log(this.state.allData);
+        console.log("aaaa: " + this.state.revenueByRoom[0]);
         let year = new Date().getFullYear();
-        
+
         const options = {
             animationEnabled: true,
             colorSet: "colorSet2",
@@ -211,69 +351,66 @@ class MainReportPage extends Component {
                 name: "Actual Sales",
                 showInLegend: true,
                 xValueFormatString: "MMMM YYYY",
-                yValueFormatString: "$#,##0",
-                dataPoints: [
-                    {x: new Date(year, 0), y: 27500},
-                    {x: new Date(year, 1), y: 29000},
-                    {x: new Date(year, 2), y: 22000},
-                    {x: new Date(year, 3), y: 26500},
-                    {x: new Date(year, 4), y: 33000},
-                    {x: new Date(year, 5), y: 37000},
-                    {x: new Date(year, 6), y: 32000},
-                    {x: new Date(year, 7), y: 27500},
-                    {x: new Date(year, 8), y: 29500},
-                    {x: new Date(year, 9), y: 43000},
-                    {x: new Date(year, 10), y: 55000, indexLabel: "High Renewals"},
-                    {x: new Date(year, 11), y: 39500}
+                yValueFormatString: "VND#,##0",
+                dataPoints: this.state.revenueByRoom.length > 0 ? this.state.revenueByRoom : [
+                    {label: "101", y: 15000000},
+                    {label: "102", y: 15000000},
+                    {label: "103", y: 15000000},
+                    {label: "104", y: 15000000},
+                    {label: "201", y: 15000000},
+                    {label: "202", y: 15000000},
+                    {label: "203", y: 15000000},
+                    {label: "204", y: 15000000}
+                    // {x: new Date(year, 0), y: 27500},
+                    // {x: new Date(year, 1), y: 29000},
+                    // {x: new Date(year, 2), y: 22000},
+                    // {x: new Date(year, 3), y: 26500},
+                    // {x: new Date(year, 4), y: 33000},
+                    // {x: new Date(year, 5), y: 37000},
+                    // {x: new Date(year, 6), y: 32000},
+                    // {x: new Date(year, 7), y: 27500},
+                    // {x: new Date(year, 8), y: 29500},
+                    // {x: new Date(year, 9), y: 43000},
+                    // {x: new Date(year, 10), y: 55000, indexLabel: "High Renewals"},
+                    // {x: new Date(year, 11), y: 39500}
                 ]
             }, {
                 type: "line",
                 name: "Expected Sales",
                 showInLegend: true,
-                yValueFormatString: "$#,##0",
+                yValueFormatString: "VND#,##0",
                 dataPoints: [
-                    {x: new Date(year, 0), y: 30000000},
-                    {x: new Date(year, 1), y: 30000000},
-                    {x: new Date(year, 2), y: 30000000},
-                    {x: new Date(year, 3), y: 30000000},
-                    {x: new Date(year, 4), y: 30000000},
-                    {x: new Date(year, 5), y: 30000000},
-                    {x: new Date(year, 6), y: 30000000},
-                    {x: new Date(year, 7), y: 30000000},
-                    {x: new Date(year, 8), y: 30000000},
-                    {x: new Date(year, 9), y: 30000000},
-                    {x: new Date(year, 10), y: 30000000},
-                    {x: new Date(year, 11), y: 30000000}
-                ]
-            }, {
-                type: "area",
-                name: "Profit",
-                markerBorderColor: "white",
-                markerBorderThickness: 2,
-                showInLegend: true,
-                yValueFormatString: "$#,##0",
-                dataPoints: [
-                    {x: new Date(year, 0), y: 11500},
-                    {x: new Date(year, 1), y: 10500},
-                    {x: new Date(year, 2), y: 9000},
-                    {x: new Date(year, 3), y: 13500},
-                    {x: new Date(year, 4), y: 13890},
-                    {x: new Date(year, 5), y: 18500},
-                    {x: new Date(year, 6), y: 16000},
-                    {x: new Date(year, 7), y: 14500},
-                    {x: new Date(year, 8), y: 15880},
-                    {x: new Date(year, 9), y: 24000},
-                    {x: new Date(year, 10), y: 31000},
-                    {x: new Date(year, 11), y: 19000}
+                    {label: "101", y: 30000000},
+                    {label: "102", y: 30000000},
+                    {label: "103", y: 30000000},
+                    {label: "104", y: 30000000},
+                    {label: "201", y: 30000000},
+                    {label: "202", y: 30000000},
+                    {label: "203", y: 30000000},
+                    {label: "204", y: 30000000}
+                    // {x: new Date(year, 0), y: 30000000},
+                    // {x: new Date(year, 1), y: 30000000},
+                    // {x: new Date(year, 2), y: 30000000},
+                    // {x: new Date(year, 3), y: 30000000},
+                    // {x: new Date(year, 4), y: 30000000},
+                    // {x: new Date(year, 5), y: 30000000},
+                    // {x: new Date(year, 6), y: 30000000},
+                    // {x: new Date(year, 7), y: 30000000},
+                    // {x: new Date(year, 8), y: 30000000},
+                    // {x: new Date(year, 9), y: 30000000},
+                    // {x: new Date(year, 10), y: 30000000},
+                    // {x: new Date(year, 11), y: 30000000}
                 ]
             }]
         }
+        console.log(this.state.revenueByRoom);
+        console.log(this.state.optionLst);
+        console.log(options);
 
         return (
             <div>
                 <hr/>
-                <hr/>
-                <hr/>
+
                 <Header as='h4'>
                     <Icon name='chart pie'/>
                     <Header.Content>
@@ -284,15 +421,25 @@ class MainReportPage extends Component {
                             options={optionsSelects}
                             defaultValue={optionsSelects[0].value}
                         />
+                        <Dropdown
+                            options={optionsSelectsMonth}
+                            //value={this.state.monthSelected}
+                            defaultValue={optionsSelectsMonth[0].value}
+                            placeholder="Chọn Tháng"
+                            selection
+                            onChange={this.handleChangeMonthDropdown}
+                        />
                     </Header.Content>
                 </Header>
-
-                <CanvasJSChart options={options}
-                               onRef={ref => this.chart = ref}
-                />
+                {this.state.isLoadingRpt1 ? <Loader active inline='centered'/> :
+                    <div>
+                        <CanvasJSChart options={options}
+                                       onRef={ref => this.chart = ref}
+                        />
+                        <ProductOptionUsing optionLst={this.state.optionLst}/>
+                    </div>
+                }
                 {/*<CostReporting/>*/}
-                <ProductOptionUsing/>
-                {/*You can get reference to the chart instance as shown above using onRef. This allows you to access all chart properties and methods*/}
             </div>
         );
     }
